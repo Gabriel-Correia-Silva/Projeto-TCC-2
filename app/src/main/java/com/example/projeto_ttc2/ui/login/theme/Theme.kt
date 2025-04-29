@@ -1,6 +1,5 @@
-package com.example.projeto_ttc2.ui.theme
+package com.example.projeto_ttc2.ui.login.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

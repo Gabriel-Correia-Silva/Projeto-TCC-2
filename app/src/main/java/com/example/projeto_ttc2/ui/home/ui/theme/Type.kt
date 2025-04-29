@@ -1,4 +1,4 @@
-package com.example.projeto_ttc2.ui.theme
+package com.example.projeto_ttc2.ui.home.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

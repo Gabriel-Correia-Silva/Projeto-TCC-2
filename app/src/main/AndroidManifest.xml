@@ -13,9 +13,14 @@
         android:theme="@style/Theme.ProjetoTTC2"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.home.HomeActivity"
+            android:exported="false"
+            android:label="@string/title_activity_home"
+            android:theme="@style/Theme.ProjetoTTC2" />
+        <activity
+            android:name=".ui.login.LoginScreenActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="@string/title_activity_login_screen"
             android:theme="@style/Theme.ProjetoTTC2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

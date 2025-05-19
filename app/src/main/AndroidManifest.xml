@@ -13,12 +13,33 @@
         android:theme="@style/Theme.ProjetoTTC2"
         tools:targetApi="31">
         <activity
-            android:name=".ui.home.HomeActivity"
+            android:name=".presentation.MainActivity"
+            android:exported="true"
+            android:label="@string/title_activity_main"
+            android:theme="@style/Theme.ProjetoTTC2">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".presentation.ui.screen.teste"
+            android:exported="false"
+            android:label="@string/title_activity_teste"
+            android:theme="@style/Theme.ProjetoTTC2" />
+        <activity
+            android:name=".presentation.ui.screen.RegisterActivity"
+            android:exported="false"
+            android:label="@string/title_activity_register"
+            android:theme="@style/Theme.ProjetoTTC2" />
+        <activity
+            android:name=".presentation.ui.screen.HomeActivity"
             android:exported="false"
             android:label="@string/title_activity_home"
             android:theme="@style/Theme.ProjetoTTC2" />
         <activity
-            android:name=".ui.login.LoginScreenActivity"
+            android:name=".presentation.ui.screen.LoginScreenActivity"
             android:exported="true"
             android:label="@string/title_activity_login_screen"
             android:theme="@style/Theme.ProjetoTTC2">

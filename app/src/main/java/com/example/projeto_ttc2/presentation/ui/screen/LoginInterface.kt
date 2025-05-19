@@ -1,4 +1,4 @@
-package com.example.projeto_ttc2.ui.login
+package com.example.projeto_ttc2.presentation.ui.screen
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -10,6 +10,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.projeto_ttc2.R
+import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
 
 
 @Composable
@@ -19,7 +20,8 @@ fun LoginInterface(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onEmailLoginClick: (String, String) -> Unit,
-    onGoogleLoginClick: () -> Unit
+    onGoogleLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -72,6 +74,13 @@ fun LoginInterface(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Entrar com Google")
             }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            onClick = onRegisterClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cadastrar-se")
         }
     }
 }

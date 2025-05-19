@@ -3,4 +3,7 @@
     <string name="title_activity_login_screen">LoginScreen</string>
     <string name="SEU_CLIENT_ID">145898374755-i9r6a2mqmc5bv47014eut7n5j8gqrfkl.apps.googleusercontent.com</string>
     <string name="title_activity_home">HomeActivity</string>
+    <string name="title_activity_register">RegisterActivity</string>
+    <string name="title_activity_teste">teste</string>
+    <string name="title_activity_main">MainActivity</string>
 </resources>

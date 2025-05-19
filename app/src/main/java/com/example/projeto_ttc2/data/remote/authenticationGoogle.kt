@@ -1,4 +1,4 @@
-package com.example.projeto_ttc2.source.remote
+package com.example.projeto_ttc2.data.remote
 
 import android.content.Context
 import android.content.Intent

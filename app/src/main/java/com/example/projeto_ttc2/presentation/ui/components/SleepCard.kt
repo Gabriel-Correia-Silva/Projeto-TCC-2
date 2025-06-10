@@ -1,7 +1,12 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -11,13 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * SleepCard: exibe sono e pontuação.
- *
- * @param durationHours horas de sono.
- * @param durationMinutes minutos de sono.
- * @param score pontuação de qualidade do sono.
- */
 @Composable
 fun SleepCard(
     durationHours: Int,
@@ -25,16 +23,17 @@ fun SleepCard(
     score: Int,
     onClick: () -> Unit
 ) {
-    // Calcula total de horas em decimal (horas + fração de minutos)
+
     val total = durationHours + durationMinutes / 60f
-    // Progresso relativo à meta de 8h (valor de 0f a 1f)
+
     val progressFraction = total / 8f
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()                                   // ocupa toda a largura disponível
-            .background(Color(0xFF007C91), RoundedCornerShape(8.dp)) // fundo azul e cantos arredondados
-            .padding(16.dp)                                   // padding interno
+            .fillMaxWidth()
+            .background(Color(0xFF007C91), RoundedCornerShape(8.dp))
+            .padding(16.dp)
+            .clickable { onClick() }
     ) {
         // Título do card
         Text(
@@ -44,24 +43,24 @@ fun SleepCard(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Barra de progresso linear (uso da API recomendada: progress como lambda)
+
         LinearProgressIndicator(
-            progress = { progressFraction },                  // passa o valor via lambda
+            progress = { progressFraction },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp),
-            color = Color.White,                              // cor do indicador preenchido
-            trackColor = Color.White.copy(alpha = 0.3f)       // cor do trilho (fundo da barra)
+            color = Color.White,
+            trackColor = Color.White.copy(alpha = 0.3f)
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Texto com duração formatada
+
         Text(
             text = "Duração do sono: ${durationHours}h ${durationMinutes}min ▲",
             fontSize = 14.sp,
             color = Color.White
         )
-        // Texto com pontuação
+
         Text(
             text = "Pontuação: $score",
             fontSize = 14.sp,

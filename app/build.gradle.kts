@@ -113,6 +113,9 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.05.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
+    // Health connect
+    implementation ("androidx.health.connect:connect-client:1.1.0-alpha10")
 }
 
 // Exclui conflitos de anotações do IntelliJ em todas as configurações

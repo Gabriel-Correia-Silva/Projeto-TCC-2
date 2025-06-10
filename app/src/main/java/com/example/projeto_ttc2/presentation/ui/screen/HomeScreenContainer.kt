@@ -15,8 +15,10 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,16 +28,14 @@ import com.example.projeto_ttc2.presentation.ui.components.AlertItem
 import com.example.projeto_ttc2.presentation.ui.components.AlertType
 import com.example.projeto_ttc2.presentation.ui.components.AlertsCard
 import com.example.projeto_ttc2.presentation.ui.components.CaloriesCard
+import com.example.projeto_ttc2.presentation.ui.components.ExercisesCard
+import com.example.projeto_ttc2.presentation.ui.components.FloatingCallButton
 import com.example.projeto_ttc2.presentation.ui.components.Header
 import com.example.projeto_ttc2.presentation.ui.components.HeartRateCard
 import com.example.projeto_ttc2.presentation.ui.components.SearchBar
+import com.example.projeto_ttc2.presentation.ui.components.Session
 import com.example.projeto_ttc2.presentation.ui.components.SleepCard
 import com.example.projeto_ttc2.presentation.ui.components.StepsCard
-import com.example.projeto_ttc2.presentation.ui.components.ExercisesCard
-import com.example.projeto_ttc2.presentation.ui.components.FloatingCallButton
-import com.example.projeto_ttc2.presentation.ui.components.Session
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import com.example.projeto_ttc2.presentation.ui.navigation.Routes
 
 @OptIn(ExperimentalMaterialApi::class)

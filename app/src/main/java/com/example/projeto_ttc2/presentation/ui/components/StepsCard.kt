@@ -1,27 +1,25 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
+//noinspection UsingMaterialAndMaterial3Libraries
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.LinearProgressIndicator
-
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.RoundedCornerShape
-
-import androidx.compose.material3.Text
 import androidx.navigation.NavHostController
 
-/**
- * StepsCard: exibe passos e progresso.
- * @param currentSteps passos atuais.
- * @param goalSteps meta de passos.
- * @param distanceKm km percorridos.
- * @param calories calorias gastas.
- */
+
 @Composable
 fun StepsCard(
     NavController: NavHostController,
@@ -36,7 +34,7 @@ fun StepsCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color(0xFF007C91), RoundedCornerShape(8.dp))
-            .clickable { onClick() } // Adicione esta linha
+            .clickable { onClick() }
             .padding(16.dp)
     ) {
         Text("Passos", fontSize = 18.sp, color = Color.White)

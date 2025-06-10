@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class AuthViewModel : ViewModel() {
-    //obtem a instacia firebase
+
 
     private val firebaseAuth = FirebaseAuth.getInstance()
 

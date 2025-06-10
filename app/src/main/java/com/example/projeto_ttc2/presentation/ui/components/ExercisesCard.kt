@@ -2,23 +2,24 @@ package com.example.projeto_ttc2.presentation.ui.components
 
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 data class Session(val duration: String, val calories: Int)
 
-/**
- * ExercisesCard: lista de exercícios da semana.
- * @param weeklyCount quantidade de sessões.
- * @param totalDurationHours duração total em horas.
- * @param sessions lista de sessões.
- */
+
 @Composable
 fun ExercisesCard(
     weeklyCount: Int,

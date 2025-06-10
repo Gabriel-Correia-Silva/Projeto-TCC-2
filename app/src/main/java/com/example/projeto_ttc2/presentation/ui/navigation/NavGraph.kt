@@ -2,18 +2,16 @@ package com.example.projeto_ttc2.presentation.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.text.font.FontVariation
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.projeto_ttc2.presentation.ui.screen.HomeScreenContainer
-import com.example.projeto_ttc2.presentation.ui.screen.RegisterScreenContainer
 import com.example.projeto_ttc2.presentation.ui.screen.LoginScreenContainer
+import com.example.projeto_ttc2.presentation.ui.screen.RegisterScreenContainer
 import com.example.projeto_ttc2.presentation.ui.screens.SettingsScreen
 import com.example.projeto_ttc2.presentation.ui.screens.StatsAndActivitiesScreen
 import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
-
 
 
 object Routes{

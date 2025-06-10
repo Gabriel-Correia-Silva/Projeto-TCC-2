@@ -2,6 +2,42 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Health Connect: Sleep (session & stages) -->
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+
+    <!-- Health Connect: Heart Rate -->
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+
+    <!-- Health Connect: Blood Oxygen Saturation (SpO₂) -->
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_OXYGEN_SATURATION"/>
+    <uses-permission android:name="android.permission.health.READ_BLOOD_OXYGEN_SATURATION"/>
+
+    <!-- Health Connect: Steps -->
+    <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+
+    <!-- Health Connect: Calories Burned -->
+    <uses-permission android:name="android.permission.health.WRITE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_CALORIES_BURNED"/>
+
+    <!-- Activity recognition (fall detection) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+
+    <!-- Location (opcional para contexto de quedas) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- Internet & estado de rede -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -19,36 +55,17 @@
             android:theme="@style/Theme.ProjetoTTC2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+
+
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
         </activity>
-        <activity
-            android:name=".presentation.ui.screen.teste"
-            android:exported="false"
-            android:label="@string/title_activity_teste"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.RegisterActivity"
-            android:exported="false"
-            android:label="@string/title_activity_register"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.HomeActivity"
-            android:exported="false"
-            android:label="@string/title_activity_home"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.LoginScreenActivity"
-            android:exported="true"
-            android:label="@string/title_activity_login_screen"
-            android:theme="@style/Theme.ProjetoTTC2">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>

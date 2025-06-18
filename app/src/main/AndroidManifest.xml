@@ -33,7 +33,6 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
     </queries>
@@ -47,25 +46,25 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ProjetoTTC2"
+        android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
             android:label="@string/title_activity_main"
             android:theme="@style/Theme.ProjetoTTC2">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
-
-
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
-
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
-        </activity>
 
+
+        </activity>
     </application>
 
 </manifest>

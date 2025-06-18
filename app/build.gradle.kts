@@ -1,124 +1,136 @@
-// app/build.gradle.kts
-
 plugins {
-    // Plugin Android Application (via Version Catalog)
+
     alias(libs.plugins.android.application)
-    // Plugin Kotlin Android (mantém a versão em libs.versions.toml)
+
     alias(libs.plugins.kotlin.android)
-    // Plugin Compose Compiler Gradle – necessário em Kotlin ≥2.0
+
     id("org.jetbrains.kotlin.plugin.compose")
-    // Kotlin Symbol Processing (KSP) – para Hilt, Room, etc.
+
     id("com.google.devtools.ksp")
-    // Google Services (Firebase)
+
     id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.projeto_ttc2"      // namespace da aplicação
-    compileSdk = 35                              // API de compilação
+    namespace = "com.example.projeto_ttc2"
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.projeto_ttc2"
-        minSdk = 29                              // SDK mínimo suportado
-        targetSdk = 35                           // SDK alvo
-        versionCode = 1                          // código interno de versão
-        versionName = "1.0"                      // nome da versão visível
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
         testInstrumentationRunner =
-            "androidx.test.runner.AndroidJUnitRunner"  // runner para testes instrumentados
+            "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            // desativa minificação em release (habilitar se usar R8/ProGuard)
+
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"             // regras ProGuard customizadas
+                "proguard-rules.pro"
             )
         }
     }
 
     compileOptions {
-        // compatibilidade com Java 17
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        // JVM target para Kotlin
         jvmTarget = "17"
     }
 
     buildFeatures {
-        // habilita Jetpack Compose
         compose = true
     }
     composeOptions {
-        // versão do Compose Compiler (estável)
-        kotlinCompilerExtensionVersion = "1.5.15"
+
+        kotlinCompilerExtensionVersion = "1.1.1"
     }
 }
 
 dependencies {
     // Play Services Auth
-    implementation("com.google.android.gms:play-services-auth:20.5.0")
+    implementation(libs.play.services.auth.v2050)
 
     // Firebase Auth via BOM
-    implementation(platform("com.google.firebase:firebase-bom:32.1.1"))
-    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
+
+    implementation (libs.google.firebase.auth)
+    implementation (libs.firebase.firestore)
 
     // AndroidX Browser (Custom Tabs)
-    implementation("androidx.browser:browser:1.6.0")
+    implementation(libs.androidx.browser)
 
     // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.0")
+    implementation(libs.androidx.navigation.compose)
 
     // Hilt for DI
-    implementation("com.google.dagger:hilt-android:2.51")
-    ksp("com.google.dagger:hilt-compiler:2.51")
+    implementation(libs.hilt.android.v251)
+    implementation(libs.support.annotations)
+    implementation(libs.androidx.annotation)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.firebase.crashlytics.buildtools)
+    ksp(libs.hilt.compiler)
+
 
     // Room persistence
-    val roomVersion = "2.7.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation(libs.androidx.room.runtime.v271)
+    implementation(libs.androidx.room.ktx.v271)
+    ksp(libs.androidx.room.compiler)
 
     // Charts library for Compose (stable)
-    implementation("io.github.dautovicharis:charts-android:2.0.0")
+    implementation(libs.charts.android)
 
     // Core AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
-    // Compose BOM to align UI/Material/Foundation/Runtime versions
-    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
-    implementation("androidx.compose.ui:ui")             // UI core
-    implementation("androidx.compose.foundation:foundation") // Foundation (layouts, gestures)
-    implementation("androidx.compose.material:material")     // Material components
-    implementation("androidx.compose.runtime:runtime")       // Compose runtime
-    implementation("androidx.compose.ui:ui-tooling-preview") // Preview in IDE
 
-    // Material3 (stable)
-    implementation("androidx.compose.material3:material3:1.3.2")
+    implementation(platform(libs.androidx.compose.bom.v20250400))
+    implementation(libs.ui)
+    implementation(libs.androidx.foundation)
+    implementation(libs.androidx.runtime)
+    implementation(libs.ui.tooling.preview)
+
+
 
     // Compose tooling (debug only)
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    debugImplementation(libs.ui.tooling)
+    debugImplementation(libs.ui.test.manifest)
 
     // Unit tests
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
 
     // Instrumented Android tests
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.0")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2025.05.00"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core.v360)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.ui.test.junit4)
 
     // Health connect
-    implementation ("androidx.health.connect:connect-client:1.1.0-alpha10")
+    implementation (libs.androidx.connect.client)
+
+
+    // Coil for image loading
+    implementation ("io.coil-kt:coil-compose:2.4.0")
+
+    implementation ("androidx.compose.runtime:runtime:1.5.4")
+    implementation ("androidx.compose.runtime:runtime-livedata:1.5.4")
+    implementation ("androidx.health.connect:connect-client:1.1.0-rc02")
+
+    implementation("androidx.compose.material3:material3:1.4.0-alpha15")
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
+    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.4.0-alpha15")
 }
 
-// Exclui conflitos de anotações do IntelliJ em todas as configurações
+
 configurations.all {
     exclude(group = "com.intellij", module = "annotations")
 }

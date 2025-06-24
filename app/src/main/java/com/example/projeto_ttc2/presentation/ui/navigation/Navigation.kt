@@ -1,5 +1,3 @@
-// ARQUIVO: presentation/navigation/AppNavigation.kt (VERSÃO FINAL E COMPLETA)
-
 package com.example.projeto_ttc2.presentation.navigation
 
 import android.R.attr.onClick

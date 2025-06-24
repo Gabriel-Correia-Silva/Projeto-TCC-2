@@ -1,15 +1,57 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# =========================================================================
+# Arquivos de Build e Gerados
+# Gerados durante o processo de compilação. Não devem ser versionados.
+# =========================================================================
+build/
+*.apk
+*.aab
+*.ap_
+
+# =========================================================================
+# Arquivos do Gradle
+# Cache e wrappers específicos do sistema.
+# =========================================================================
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle-wrapper.jar
+
+# =========================================================================
+# Arquivos de Configuração Local
+# Contêm caminhos e segredos específicos da sua máquina.
+# =========================================================================
 local.properties
+
+# =========================================================================
+# Arquivos do IDE (Android Studio / IntelliJ)
+# Configurações de workspace, histórico local, etc.
+# =========================================================================
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+*.iws
+*.iml
+*.ipr
+
+# =========================================================================
+# Chaves de Assinatura e Segredos
+# NUNCA versione chaves! Isso é uma falha grave de segurança.
+# =========================================================================
+*.keystore
+*.jks
+keystore.properties
+
+# =========================================================================
+# Outros
+# Logs, arquivos de teste, capturas de tela do emulador, etc.
+# =========================================================================
+captures/
+.DS_Store
+*.log
+/cxx/
+
+# Arquivos de dependências do Kover (ferramenta de coverage)
+*.ic
+*.ilk

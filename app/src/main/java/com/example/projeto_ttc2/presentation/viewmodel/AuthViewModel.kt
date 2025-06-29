@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.repository.AuthRepository
 import com.example.projeto_ttc2.database.repository.AuthResult
+import com.example.projeto_ttc2.presentation.state.AuthState
+import com.example.projeto_ttc2.presentation.state.UserRole
 import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,18 +75,4 @@ class AuthViewModel @Inject constructor(
     fun setError(message: String) {
         _authState.value = AuthState.Error(message)
     }
-}
-
-sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
-    object Authenticated : AuthState()
-    data class Error(val message: String) : AuthState()
-    data class NeedsRegistration(val user: FirebaseUser) : AuthState()
-}
-
-sealed class UserRole {
-    object Supervisor : UserRole()
-    object Supervised : UserRole()
-    object Unknown : UserRole()
 }

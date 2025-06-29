@@ -11,35 +11,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF121212),
-    secondary = Color(0xFF1F1F1F),
-    tertiary = Color(0xFF232323),
-    background = Color(0xFF121212),
-    surface = Color(0xFF1F1F1F),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White,
+    primary = Purple80,
+    secondary = PurpleGrey80,
+    tertiary = Pink80
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
+    primary = TealGreen,
     secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    tertiary = Pink40,
+    background = LightTeal,
+    surface = LightTeal,
     onPrimary = Color.White,
     onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    onBackground = DarkText,
+    onSurface = DarkText,
 )
-
 
 @Composable
 fun ProjetoTTC2Theme(
@@ -60,7 +50,7 @@ fun ProjetoTTC2Theme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = MaterialTheme.typography,
         content = content
     )
 }

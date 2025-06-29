@@ -20,8 +20,7 @@ interface BatimentoCardiacoDao {
     fun getBatimentosDoPeriodo(inicio: Instant, fim: Instant): Flow<List<BatimentoCardiaco>>
 
     @Query("SELECT * FROM batimentos_cardiacos ORDER BY timestamp DESC LIMIT 1")
-
-    suspend fun getUltimoBatimento(): BatimentoCardiaco?
+    fun getUltimoBatimento(): Flow<BatimentoCardiaco?>
 
     @Query("DELETE FROM batimentos_cardiacos")
 

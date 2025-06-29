@@ -18,14 +18,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.projeto_ttc2.database.local.DashboardData
+import com.example.projeto_ttc2.presentation.state.AuthState
+import com.example.projeto_ttc2.presentation.state.UiState
+import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
 import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
 import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
+
 
 
 @Composable
@@ -40,7 +42,9 @@ fun AppNavigation(
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val userRole by authViewModel.userRole.collectAsStateWithLifecycle()
     val uiState by healthConnectViewModel.uiState
-    val latestBpm by healthConnectViewModel.latestHeartRate.collectAsStateWithLifecycle()
+    val latestBpm by healthConnectViewModel.latestHeartRate.collectAsStateWithLifecycle(initialValue = 0L)
+    val todaySteps by healthConnectViewModel.todaySteps.collectAsStateWithLifecycle()
+    val todayDistanceKm by healthConnectViewModel.todayDistanceKm.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
@@ -62,10 +66,9 @@ fun AppNavigation(
                 }
             }
             is AuthState.Error -> {
-                val encodedMessage = URLEncoder.encode(state.message, StandardCharsets.UTF_8.toString())
-                navController.navigate("error/$encodedMessage")
+
             }
-            else -> {
+            else -> { // Unauthenticated
                 if (navController.currentBackStackEntry?.destination?.route != "login") {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
@@ -75,7 +78,7 @@ fun AppNavigation(
         }
     }
 
-    // Define o grafo de navegação.
+
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(onSignInRequested = googleSignInLauncher)
@@ -102,8 +105,9 @@ fun AppNavigation(
         composable("supervised_dashboard") {
             val context = LocalContext.current
 
+
             LaunchedEffect(Unit) {
-                healthConnectViewModel.initialLoad(context)
+                healthConnectViewModel.syncData()
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
@@ -111,11 +115,15 @@ fun AppNavigation(
                 SupervisedDashboardScreen(
                     userName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
 
-                    dashboardData = DashboardData(heartRate = latestBpm),
+                    dashboardData = DashboardData(
+                        heartRate = latestBpm,
+                        steps = todaySteps,
+                        distanceKm = todayDistanceKm
+                    ),
                     onSosClick = { /* Lógica do botao SOS */ },
                     onLogout = { authViewModel.signOut() },
                     isRefreshing = uiState is UiState.Loading,
-                    onRefresh = { healthConnectViewModel.initialLoad(context) }
+                    onRefresh = { healthConnectViewModel.syncData() }
                 )
 
                 when (val state = uiState) {

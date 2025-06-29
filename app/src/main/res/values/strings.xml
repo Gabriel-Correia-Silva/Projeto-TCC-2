@@ -12,4 +12,5 @@
     <string name="title_activity_patient_detail_screen">PatientDetailScreen</string>
     <string name="title_activity_patient_profile_screen">PatientProfileScreen</string>
     <string name="title_activity_registration_screen">RegistrationScreen</string>
+    <string name="title_activity_splash_screen">SplashScreen</string>
 </resources>

@@ -1,8 +1,6 @@
-// ARQUIVO: presentation/navigation/AppNavigation.kt (VERSÃO FINAL E COMPLETA)
-
 package com.example.projeto_ttc2.presentation.navigation
 
-import android.R.attr.onClick
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +17,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
 import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
 import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
@@ -28,6 +27,7 @@ import com.google.firebase.ktx.Firebase
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+
 @Composable
 fun AppNavigation(
     authViewModel: AuthViewModel,
@@ -36,13 +36,12 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
-    
+
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val userRole by authViewModel.userRole.collectAsStateWithLifecycle()
-    val dashboardData by healthConnectViewModel.dashboardData.collectAsStateWithLifecycle()
     val uiState by healthConnectViewModel.uiState
+    val latestBpm by healthConnectViewModel.latestHeartRate.collectAsStateWithLifecycle()
 
-    // Lógica de navegação baseada em autenticação (sem alterações necessárias aqui)
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
             is AuthState.Authenticated -> {
@@ -76,6 +75,7 @@ fun AppNavigation(
         }
     }
 
+    // Define o grafo de navegação.
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
             LoginScreen(onSignInRequested = googleSignInLauncher)
@@ -84,7 +84,6 @@ fun AppNavigation(
         composable("registration") {
             val currentState = authState
             if (currentState is AuthState.NeedsRegistration) {
-                // CORRIGIDO: Preenchendo os TODOs com a lógica correta
                 RegistrationScreen(
                     user = currentState.user,
                     onRegister = { name, role, supervisorId ->
@@ -92,52 +91,43 @@ fun AppNavigation(
                     }
                 )
             } else {
-                // Se o estado não for mais 'NeedsRegistration', volta para a tela anterior
                 LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
 
         composable("supervisor_dashboard") {
-            // TODO: Implementar a tela do supervisor
             Text("Supervisor Dashboard - Logado!")
         }
 
         composable("supervised_dashboard") {
             val context = LocalContext.current
 
-            // Inicia o processo de verificação de permissões e busca de dados
-            // quando o usuário chega nesta tela.
             LaunchedEffect(Unit) {
                 healthConnectViewModel.initialLoad(context)
             }
 
-            // A tela do dashboard agora é envolvida por um Box
             Box(modifier = Modifier.fillMaxSize()) {
-                // A tela principal é desenhada no fundo
                 val currentUser = Firebase.auth.currentUser
                 SupervisedDashboardScreen(
                     userName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
-                    dashboardData = dashboardData,
-                    onSosClick = { navController.navigate("telaX") },
+
+                    dashboardData = DashboardData(heartRate = latestBpm),
+                    onSosClick = { /* Lógica do botao SOS */ },
                     onLogout = { authViewModel.signOut() },
                     isRefreshing = uiState is UiState.Loading,
                     onRefresh = { healthConnectViewModel.initialLoad(context) }
                 )
 
-                // Feedback visual desenhado POR CIMA da tela principal
                 when (val state = uiState) {
                     is UiState.Loading -> {
-                        // Mostra um indicador de carregamento centralizado
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
                     is UiState.Error -> {
-                        // Mostra uma mensagem de erro (pode ser um Snackbar ou um Dialog no futuro)
                         Text(
                             text = "Erro: ${state.message}",
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
-                    // Não mostra nada para os estados Success ou Uninitialized
                     else -> {}
                 }
             }
@@ -148,7 +138,6 @@ fun AppNavigation(
             arguments = listOf(navArgument("message") { type = NavType.StringType })
         ) { backStackEntry ->
             val message = backStackEntry.arguments?.getString("message") ?: "Ocorreu um erro."
-            // TODO: Criar uma tela de erro mais elaborada
             Text("Erro: $message")
         }
     }

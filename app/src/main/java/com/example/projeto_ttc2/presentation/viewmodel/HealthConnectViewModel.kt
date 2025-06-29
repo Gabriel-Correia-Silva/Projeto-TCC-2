@@ -2,58 +2,82 @@ package com.example.projeto_ttc2.presentation.viewmodel
 
 import android.content.Context
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContract
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-
-import com.example.projeto_ttc2.database.local.DashboardData
+import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
+import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.repository.HeartRateRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
-import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import kotlin.collections.containsAll
-import kotlin.text.compareTo
+import javax.inject.Inject
 
-class HealthConnectViewModel : ViewModel() {
+@HiltViewModel
+class HealthConnectViewModel @Inject constructor(
+    private val batimentoCardiacoDao: BatimentoCardiacoDao,
+    private val heartRateRepository: HeartRateRepository
+) : ViewModel() {
 
-    // Cliente para interagir com o Health Connect
+    private val TAG = "HealthConnectViewModel"
     private lateinit var healthConnectClient: HealthConnectClient
-
     private var isRequestingPermission = false
+    private var currentContext: Context? = null
 
-    // Estado da UI para refletir o que está acontecendo (carregando, sucesso, erro)
     val uiState = mutableStateOf<UiState>(UiState.Uninitialized)
-
-    // Estado dos dados do dashboard
-    private val _dashboardData = kotlinx.coroutines.flow.MutableStateFlow(DashboardData())
-    val dashboardData: StateFlow<DashboardData> = _dashboardData
-
-    // Canal para enviar eventos únicos para a UI (como pedir permissão)
     private val _permissionRequestChannel = Channel<Set<String>>()
     val permissionRequestChannel = _permissionRequestChannel.receiveAsFlow()
 
-    // Permissões que o app precisa para popular o dashboard
+    private val _latestHeartRate = MutableStateFlow(0L)
+    val latestHeartRate: StateFlow<Long> = _latestHeartRate
+
     private val PERMISSIONS =
-        setOf(
-            HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(DistanceRecord::class),
-            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-            HealthPermission.getReadPermission(HeartRateRecord::class),
-            HealthPermission.getReadPermission(SleepSessionRecord::class)
-        )
+        setOf(HealthPermission.getReadPermission(HeartRateRecord::class))
+
+    init {
+        fetchLatestHeartRateFromDb()
+    }
+
+    private fun checkHealthConnectAvailability(context: Context): Boolean {
+        return when (HealthConnectClient.getSdkStatus(context)) {
+            HealthConnectClient.SDK_AVAILABLE -> {
+                Log.d(TAG, "Health Connect está disponível")
+                true
+            }
+            HealthConnectClient.SDK_UNAVAILABLE -> {
+                Log.e(TAG, "Health Connect não está disponível neste dispositivo")
+                false
+            }
+            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> {
+                Log.e(TAG, "Health Connect precisa ser atualizado")
+                false
+            }
+            else -> {
+                Log.e(TAG, "Status desconhecido do Health Connect")
+                false
+            }
+        }
+    }
 
     fun initialLoad(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            currentContext = context
+            if (!checkHealthConnectAvailability(context)) {
+                uiState.value = UiState.Error("Health Connect não está disponível ou precisa ser atualizado")
+                return
+            }
+
             healthConnectClient = HealthConnectClient.getOrCreate(context)
             if (!isRequestingPermission) {
                 checkPermissionsAndFetchData()
@@ -68,7 +92,7 @@ class HealthConnectViewModel : ViewModel() {
             val granted = healthConnectClient.permissionController.getGrantedPermissions()
             if (granted.containsAll(PERMISSIONS)) {
                 isRequestingPermission = false
-                fetchDashboardData()
+                currentContext?.let { readAndSaveHeartRateData(it) }
             } else {
                 if (!isRequestingPermission) {
                     isRequestingPermission = true
@@ -78,85 +102,119 @@ class HealthConnectViewModel : ViewModel() {
         }
     }
 
-
     fun onPermissionsResult(granted: Set<String>) {
         isRequestingPermission = false
         if (granted.containsAll(PERMISSIONS)) {
-            fetchDashboardData()
+            currentContext?.let { readAndSaveHeartRateData(it) }
         } else {
-            uiState.value = UiState.Error("Permissões necessárias não foram concedidas.")
+            uiState.value = UiState.Error("Permissão para ler batimentos cardíacos não foi concedida.")
         }
     }
 
-    private fun fetchDashboardData() {
+    private fun readAndSaveHeartRateData(context: Context) {
         viewModelScope.launch {
             uiState.value = UiState.Loading
+            Log.d(TAG, "Iniciando leitura e salvamento de dados de batimentos cardíacos.")
             try {
-                val startOfDay = ZonedDateTime.now().truncatedTo(ChronoUnit.DAYS)
-                val now = Instant.now()
+                val availability = HealthConnectClient.getSdkStatus(context)
+                if (availability != HealthConnectClient.SDK_AVAILABLE) {
+                    val errorMessage = when (availability) {
+                        HealthConnectClient.SDK_UNAVAILABLE -> "Health Connect não está disponível neste dispositivo"
+                        HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> "Health Connect precisa ser atualizado"
+                        else -> "Status desconhecido do Health Connect"
+                    }
+                    throw Exception(errorMessage)
+                }
 
-                // Busca cada dado em paralelo (mais eficiente)
-                val steps = readSteps(startOfDay.toInstant(), now)
-                val distance = readDistance(startOfDay.toInstant(), now)
-                val calories = readCalories(startOfDay.toInstant(), now)
-                val heartRate = readLatestHeartRate()
-                val sleep = readSleep(startOfDay.minusDays(1).toInstant(), now)
-
-                // Atualiza o StateFlow com os dados lidos
-                _dashboardData.value = DashboardData(
-                    steps = steps,
-                    distanceKm = distance / 1000.0, // Converte metros para km
-                    caloriesKcal = calories,
-                    activeCaloriesKcal = 0.0, // Health Connect não separa facilmente ativos de total
-                    heartRate = heartRate,
-                    sleepDurationMinutes = sleep
+                val fim = Instant.now()
+                val inicio = fim.minus(7, ChronoUnit.DAYS)
+                val request = ReadRecordsRequest(
+                    recordType = HeartRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(inicio, fim)
                 )
-                uiState.value = UiState.Success
+
+                val response = healthConnectClient.readRecords(request)
+                Log.d(TAG, "Resposta do Health Connect: ${response.records.size} registros encontrados")
+
+                if (response.records.isEmpty()) {
+                    Log.w(TAG, "Nenhum registro de batimento cardíaco encontrado no período de 7 dias.")
+                    uiState.value = UiState.Error("Nenhum dado de batimento cardíaco encontrado nos últimos 7 dias")
+                } else {
+                    Log.i(TAG, "SUCESSO! ${response.records.size} registros de batimento cardíaco encontrados.")
+
+                    val entidadesParaInserir = response.records.flatMap { record ->
+                        record.samples.map { sample ->
+                            // CORREÇÃO: Log para debug do timestamp original
+                            Log.d(TAG, "Timestamp original: ${sample.time}")
+                            Log.d(TAG, "Timestamp em millis: ${sample.time.toEpochMilli()}")
+                            Log.d(TAG, "Data formatada: ${sample.time}")
+
+                            BatimentoCardiaco(
+                                healthConnectId = record.metadata.id,
+                                bpm = sample.beatsPerMinute,
+                                timestamp = sample.time, // Não precisa converter, já é Instant
+                                zoneOffset = record.endZoneOffset
+                            )
+                        }
+                    }
+
+                    if (entidadesParaInserir.isNotEmpty()) {
+                        entidadesParaInserir.forEach { batimento ->
+                            Log.d(TAG, "Inserindo: BPM=${batimento.bpm}, Timestamp=${batimento.timestamp}")
+                        }
+
+                        batimentoCardiacoDao.insertAll(entidadesParaInserir)
+                        Log.i(TAG, "${entidadesParaInserir.size} amostras foram salvas no banco de dados.")
+                        fetchLatestHeartRateFromDb()
+                        uiState.value = UiState.Success
+                    } else {
+                        uiState.value = UiState.Error("Nenhuma amostra válida encontrada nos registros")
+                    }
+                }
             } catch (e: Exception) {
-                uiState.value = UiState.Error(e.message ?: "Falha ao ler dados do Health Connect")
+                Log.e(TAG, "FALHA ao ler ou salvar dados de batimento cardíaco.", e)
+                uiState.value = UiState.Error(e.message ?: "Erro desconhecido ao acessar Health Connect")
             }
         }
     }
 
-    // --- Funções de Leitura de Dados ---
-
-    private suspend fun readSteps(start: Instant, end: Instant): Long {
-        val request = ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(start, end))
-        val response = healthConnectClient.readRecords(request)
-        return response.records.sumOf { it.count }
+    private fun fetchLatestHeartRateFromDb() {
+        viewModelScope.launch {
+            Log.d(TAG, "Buscando o último batimento cardíaco no banco de dados local...")
+            val ultimoBpmDoBanco = heartRateRepository.getLatestHeartRateBpm()
+            Log.i(TAG, ">>> ÚLTIMO BATIMENTO ENCONTRADO NO BANCO: $ultimoBpmDoBanco bpm <<<")
+            _latestHeartRate.value = ultimoBpmDoBanco
+        }
     }
 
-    private suspend fun readDistance(start: Instant, end: Instant): Double {
-        val request = ReadRecordsRequest(DistanceRecord::class, TimeRangeFilter.between(start, end))
-        val response = healthConnectClient.readRecords(request)
-        return response.records.sumOf { it.distance.inMeters }
-    }
+    fun debugDatabaseInfo() {
+        viewModelScope.launch {
+            try {
+                val total = batimentoCardiacoDao.getTotalRegistros()
+                val ultimos10 = batimentoCardiacoDao.getUltimos10Batimentos()
 
-    private suspend fun readCalories(start: Instant, end: Instant): Double {
-        val request = ReadRecordsRequest(TotalCaloriesBurnedRecord::class, TimeRangeFilter.between(start, end))
-        val response = healthConnectClient.readRecords(request)
-        return response.records.sumOf { it.energy.inKilocalories }
-    }
-
-    private suspend fun readLatestHeartRate(): Long {
-        val request = ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.before(Instant.now()))
-        val response = healthConnectClient.readRecords(request)
-        // Pega a amostra mais recente, se houver
-        return response.records.flatMap { it.samples }.maxByOrNull { it.time }?.beatsPerMinute ?: 0L
-    }
-
-    private suspend fun readSleep(start: Instant, end: Instant): Long {
-        val request = ReadRecordsRequest(SleepSessionRecord::class, TimeRangeFilter.between(start, end))
-        val response = healthConnectClient.readRecords(request)
-        val totalDuration = response.records.sumOf { it.endTime.toEpochMilli() - it.startTime.toEpochMilli() }
-        return totalDuration / (1000 * 60) // Converte milissegundos para minutos
+                Log.d(TAG, "=== DEBUG DATABASE INFO ===")
+                Log.d(TAG, "Total de registros: $total")
+                Log.d(TAG, "Registros encontrados:")
+                ultimos10.forEach { batimento ->
+                    Log.d(TAG, "ID: ${batimento.id}, BPM: ${batimento.bpm}")
+                    Log.d(TAG, "Timestamp: ${batimento.timestamp}")
+                    Log.d(TAG, "Timestamp em millis: ${batimento.timestamp.toEpochMilli()}")
+                    Log.d(TAG, "Data legível: ${java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(batimento.timestamp.atZone(java.time.ZoneId.systemDefault()))}")
+                    Log.d(TAG, "---")
+                }
+                Log.d(TAG, "===========================")
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao buscar dados do banco", e)
+            }
+        }
     }
 }
 
-// Sealed class para representar os estados da UI de forma clara
 sealed class UiState {
     object Uninitialized : UiState()
     object Loading : UiState()
     object Success : UiState()
     data class Error(val message: String) : UiState()
 }
+

@@ -1,33 +1,28 @@
 package com.example.projeto_ttc2.presentation
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.example.projeto_ttc2.R
-import com.example.projeto_ttc2.database.repository.AuthRepository
 import com.example.projeto_ttc2.presentation.navigation.AppNavigation
 import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.HealthConnectViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.firestore.FirebaseFirestore
+// ADICIONADO: Importe a anotação do Hilt
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val authViewModel: AuthViewModel by viewModels {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                val authRepository = AuthRepository(FirebaseFirestore.getInstance())
-                return AuthViewModel(authRepository) as T
-            }
-        }
-    }
+
     private val healthConnectViewModel: HealthConnectViewModel by viewModels()
+    private val authViewModel: AuthViewModel by viewModels()
+
 
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -37,6 +32,8 @@ class MainActivity : ComponentActivity() {
             val account = task.getResult(ApiException::class.java)
             account.idToken?.let { authViewModel.signInWithGoogle(it) }
         } catch (e: ApiException) {
+
+            Log.e("GoogleSignIn", "Falha no login com Google. Status Code: ${e.statusCode}, Mensagem: ${e.message}")
             authViewModel.setError("Falha no login com Google: ${e.statusCode}")
         }
     }
@@ -44,6 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
             AppNavigation(
                 authViewModel = authViewModel,
                 healthConnectViewModel = healthConnectViewModel,

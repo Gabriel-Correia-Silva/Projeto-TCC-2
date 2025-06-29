@@ -35,7 +35,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo do app
+
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "App Logo",
@@ -44,7 +44,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Título
+
             Text(
                 text = "TTC Manager",
                 style = MaterialTheme.typography.headlineMedium,
@@ -53,7 +53,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Subtítulo
+
             Text(
                 text = "Sistema de acompanhamento de TCC",
                 style = MaterialTheme.typography.bodyLarge,
@@ -62,7 +62,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Botão de login
+
             Button(
                 onClick = onSignInRequested,
                 modifier = Modifier

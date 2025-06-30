@@ -9,6 +9,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
+import com.example.projeto_ttc2.database.entities.Sono
 import com.example.projeto_ttc2.database.repository.HealthConnectRepository
 import com.example.projeto_ttc2.presentation.state.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,6 +47,9 @@ class HealthConnectViewModel @Inject constructor(
     val todayDistanceKm: StateFlow<Double> = todaySteps.map { steps ->
         (steps * 52.1) / 100_000.0
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val latestSleepSession: StateFlow<Sono?> = healthConnectRepository.getLatestSleepSession()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
 
     private fun checkHealthConnectAvailability(context: Context): Boolean {
@@ -109,6 +113,7 @@ class HealthConnectViewModel @Inject constructor(
             try {
                 healthConnectRepository.syncHeartRateData()
                 healthConnectRepository.syncTodaySteps()
+                healthConnectRepository.syncSleepData()
                 uiState.value = UiState.Success
             } catch (e: Exception) {
                 Log.e(TAG, "FALHA ao sincronizar dados.", e)

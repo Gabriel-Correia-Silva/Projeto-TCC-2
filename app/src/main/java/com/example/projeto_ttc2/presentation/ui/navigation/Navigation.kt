@@ -45,6 +45,7 @@ fun AppNavigation(
     val latestBpm by healthConnectViewModel.latestHeartRate.collectAsStateWithLifecycle(initialValue = 0L)
     val todaySteps by healthConnectViewModel.todaySteps.collectAsStateWithLifecycle()
     val todayDistanceKm by healthConnectViewModel.todayDistanceKm.collectAsStateWithLifecycle()
+    val sleepSession by healthConnectViewModel.latestSleepSession.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
@@ -118,7 +119,8 @@ fun AppNavigation(
                     dashboardData = DashboardData(
                         heartRate = latestBpm,
                         steps = todaySteps,
-                        distanceKm = todayDistanceKm
+                        distanceKm = todayDistanceKm,
+                        sleepSession = sleepSession
                     ),
                     onSosClick = { /* Lógica do botao SOS */ },
                     onLogout = { authViewModel.signOut() },

@@ -5,13 +5,17 @@ import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
 import com.example.projeto_ttc2.database.dao.PassosDao
+import com.example.projeto_ttc2.database.dao.SonoDao
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.Passos
+import com.example.projeto_ttc2.database.entities.Sono
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -24,8 +28,8 @@ import javax.inject.Singleton
 @Singleton
 class HealthConnectRepository @Inject constructor(
     private val batimentoCardiacoDao: BatimentoCardiacoDao,
-    private val passosDao: PassosDao
-
+    private val passosDao: PassosDao,
+    private val sonoDao: SonoDao
 ) {
     private var healthConnectClient: HealthConnectClient? = null
     private val TAG = "HealthConnectRepository"
@@ -63,18 +67,18 @@ class HealthConnectRepository @Inject constructor(
             record.samples.map { sample ->
                 BatimentoCardiaco(
                     timestamp = sample.time,
-                    healthConnectId = record.metadata.id,
+                    healthConnectId = record.metadata.id + "_" + sample.time.toEpochMilli(),
                     bpm = sample.beatsPerMinute,
-                    zoneOffset = record.endZoneOffset
+                    zoneOffset = record.startZoneOffset
                 )
             }
         }
 
         if (entidadesParaInserir.isNotEmpty()) {
             batimentoCardiacoDao.insertAll(entidadesParaInserir)
-            Log.i(TAG, "${entidadesParaInserir.size} amostras foram salvas no banco de dados.")
+            Log.i(TAG, "${entidadesParaInserir.size} amostras de batimento cardíaco salvas no banco de dados.")
         } else {
-            Log.w(TAG, "Nenhuma amostra válida encontrada nos registros para salvar.")
+            Log.w(TAG, "Nenhuma amostra de batimento cardíaco para inserir.")
         }
     }
 
@@ -96,6 +100,52 @@ class HealthConnectRepository @Inject constructor(
         Log.d(TAG, "Dados de passos salvos no banco de dados para $hoje.")
     }
 
+    suspend fun syncSleepData() {
+        val client = healthConnectClient ?: return
+        val yesterday = ZonedDateTime.now().minus(1, ChronoUnit.DAYS).toInstant()
+
+        try {
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.after(yesterday)
+            )
+            val response = client.readRecords(request)
+            val sonoEntities = response.records.map { record ->
+                val awake = record.stages
+                    .filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }
+                    .sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() }
+                val rem = record.stages
+                    .filter { it.stage == SleepSessionRecord.STAGE_TYPE_REM }
+                    .sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() }
+                val deep = record.stages
+                    .filter { it.stage == SleepSessionRecord.STAGE_TYPE_DEEP }
+                    .sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() }
+                val light = record.stages
+                    .filter { it.stage == SleepSessionRecord.STAGE_TYPE_LIGHT }
+                    .sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() }
+
+                Sono(
+                    healthConnectId = record.metadata.id,
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    durationMinutes = java.time.Duration.between(record.startTime, record.endTime).toMinutes(),
+                    awakeDurationMinutes = awake,
+                    remSleepDurationMinutes = rem,
+                    deepSleepDurationMinutes = deep,
+                    lightSleepDurationMinutes = light
+                )
+            }
+            if (sonoEntities.isNotEmpty()) {
+                sonoDao.insertAll(sonoEntities)
+                Log.d(TAG, "${sonoEntities.size} sessões de sono inseridas/atualizadas.")
+            } else {
+                Log.d(TAG, "Nenhuma nova sessão de sono encontrada.")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao sincronizar dados de sono", e)
+        }
+    }
+
     fun getLatestHeartRate(): Flow<Long> {
         return batimentoCardiacoDao.getUltimoBatimento().map { it?.bpm ?: 0L }
     }
@@ -104,10 +154,15 @@ class HealthConnectRepository @Inject constructor(
         return passosDao.getPassosPorData(LocalDate.now()).map { it?.contagem ?: 0L }
     }
 
+    fun getLatestSleepSession(): Flow<Sono?> {
+        return sonoDao.getUltimaSessaoSono()
+    }
+
     companion object {
         val REQUIRED_PERMISSIONS = setOf(
             HealthPermission.getReadPermission(HeartRateRecord::class),
-            HealthPermission.getReadPermission(StepsRecord::class)
+            HealthPermission.getReadPermission(StepsRecord::class),
+            HealthPermission.getReadPermission(SleepSessionRecord::class)
         )
     }
 }

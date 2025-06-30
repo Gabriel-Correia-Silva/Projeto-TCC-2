@@ -11,9 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.projeto_ttc2.database.entities.Sono
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.ui.components.*
 import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +58,7 @@ fun SupervisedDashboardScreen(
                 item { StepsCard(steps = dashboardData.steps, goal = dashboardData.stepsGoal, distanceKm = dashboardData.distanceKm) }
                 item { CaloriesCard(activeKcal = dashboardData.activeCaloriesKcal, totalKcal = dashboardData.caloriesKcal) }
                 item { HeartRateCard(bpm = dashboardData.heartRate) }
-                item { SleepCard(durationMinutes = dashboardData.sleepDurationMinutes) }
+                item { SleepCard(sleepSession = dashboardData.sleepSession) }
                 item { ExerciseCard() }
                 item { AlertsCard() }
                 item {
@@ -107,13 +110,21 @@ fun SupervisedDashboardScreen(
 @Preview(showBackground = true, device = "spec:width=360dp,height=800dp,dpi=480")
 @Composable
 fun SupervisedDashboardScreenPreview() {
+    val sampleSleepSession = Sono(
+        healthConnectId = "preview_id",
+        startTime = Instant.now().minus(8, ChronoUnit.HOURS),
+        endTime = Instant.now(),
+        durationMinutes = 455,
+        awakeDurationMinutes = 25,
+        remSleepDurationMinutes = 90,
+        lightSleepDurationMinutes = 240,
+        deepSleepDurationMinutes = 100
+    )
     val sampleData = DashboardData(
         steps = 3521,
         distanceKm = 2.5,
-        caloriesKcal = 1890.0,
-        activeCaloriesKcal = 310.0,
         heartRate = 68,
-        sleepDurationMinutes = 455
+        sleepSession = sampleSleepSession
     )
     ProjetoTTC2Theme {
         SupervisedDashboardScreen(

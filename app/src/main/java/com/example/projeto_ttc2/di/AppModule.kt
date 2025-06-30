@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
 import com.example.projeto_ttc2.database.dao.PassosDao
+import com.example.projeto_ttc2.database.dao.SonoDao
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -50,5 +51,10 @@ object AppModule {
     @Singleton
     fun providePassosDao(appDatabase: AppDatabase): PassosDao {
         return appDatabase.passosDao()
+    }
+
+    @Provides
+    fun provideSonoDao(appDatabase: AppDatabase): SonoDao {
+        return appDatabase.sonoDao()
     }
 }

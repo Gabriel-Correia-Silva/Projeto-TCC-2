@@ -126,7 +126,7 @@ class HealthConnectViewModel @Inject constructor(
                 Log.d(TAG, "=== DEBUG DATABASE INFO ===")
                 Log.d(TAG, "Total de registros: $total")
                 ultimos10.forEach { batimento ->
-                    Log.d(TAG, "ID: ${batimento.id}, BPM: ${batimento.bpm}, Timestamp: ${batimento.timestamp}")
+                    Log.d(TAG, "HealthConnectID: ${batimento.healthConnectId}, BPM: ${batimento.bpm}, Timestamp: ${batimento.timestamp}")
                 }
                 Log.d(TAG, "===========================")
             } catch (e: Exception) {

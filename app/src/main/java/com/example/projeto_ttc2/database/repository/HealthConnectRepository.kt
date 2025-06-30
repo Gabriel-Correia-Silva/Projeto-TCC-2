@@ -62,9 +62,9 @@ class HealthConnectRepository @Inject constructor(
         val entidadesParaInserir = response.records.flatMap { record ->
             record.samples.map { sample ->
                 BatimentoCardiaco(
+                    timestamp = sample.time,
                     healthConnectId = record.metadata.id,
                     bpm = sample.beatsPerMinute,
-                    timestamp = sample.time,
                     zoneOffset = record.endZoneOffset
                 )
             }
@@ -76,7 +76,9 @@ class HealthConnectRepository @Inject constructor(
         } else {
             Log.w(TAG, "Nenhuma amostra válida encontrada nos registros para salvar.")
         }
-    }suspend fun syncTodaySteps() {
+    }
+
+    suspend fun syncTodaySteps() {
         val client = healthConnectClient ?: throw IllegalStateException("HealthConnectClient não inicializado.")
         val hoje = LocalDate.now()
         val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()

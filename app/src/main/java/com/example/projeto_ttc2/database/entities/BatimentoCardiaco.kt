@@ -9,17 +9,15 @@ import java.time.ZoneOffset
 
 @Entity(tableName = "batimentos_cardiacos")
 data class BatimentoCardiaco(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0L,
+    @PrimaryKey
+    @ColumnInfo(name = "timestamp")
+    val timestamp: Instant,
 
     @ColumnInfo(name = "health_connect_id")
     val healthConnectId: String,
 
     @ColumnInfo(name = "bpm")
     val bpm: Long,
-
-    @ColumnInfo(name = "timestamp")
-    val timestamp: Instant,
 
     @ColumnInfo(name = "zone_offset")
     val zoneOffset: ZoneOffset?

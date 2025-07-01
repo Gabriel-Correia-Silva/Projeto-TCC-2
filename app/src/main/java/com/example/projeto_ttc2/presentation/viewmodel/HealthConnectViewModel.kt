@@ -9,6 +9,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
+import com.example.projeto_ttc2.database.dao.CaloriasDao
 import com.example.projeto_ttc2.database.entities.Sono
 import com.example.projeto_ttc2.database.repository.HealthConnectRepository
 import com.example.projeto_ttc2.presentation.state.UiState
@@ -27,7 +28,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HealthConnectViewModel @Inject constructor(
     private val healthConnectRepository: HealthConnectRepository,
-    private val batimentoCardiacoDao: BatimentoCardiacoDao // Mantido para debug
+    private val batimentoCardiacoDao: BatimentoCardiacoDao,
+    private val caloriasDao: CaloriasDao
 ) : ViewModel() {
 
     private val TAG = "HealthConnectViewModel"
@@ -51,6 +53,11 @@ class HealthConnectViewModel @Inject constructor(
     val latestSleepSession: StateFlow<Sono?> = healthConnectRepository.getLatestSleepSession()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val todayActiveCalories: StateFlow<Double> = healthConnectRepository.getTodayActiveCalories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val todayTotalCalories: StateFlow<Double> = healthConnectRepository.getTodayTotalCalories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     private fun checkHealthConnectAvailability(context: Context): Boolean {
         return when (HealthConnectClient.getSdkStatus(context)) {
@@ -76,7 +83,7 @@ class HealthConnectViewModel @Inject constructor(
                 return
             }
 
-            healthConnectRepository.initialize(context) // Garante inicialização
+            healthConnectRepository.initialize(context)
             checkPermissionsAndFetchData()
 
         } else {
@@ -114,6 +121,7 @@ class HealthConnectViewModel @Inject constructor(
                 healthConnectRepository.syncHeartRateData()
                 healthConnectRepository.syncTodaySteps()
                 healthConnectRepository.syncSleepData()
+                healthConnectRepository.syncCaloriesData()
                 uiState.value = UiState.Success
             } catch (e: Exception) {
                 Log.e(TAG, "FALHA ao sincronizar dados.", e)

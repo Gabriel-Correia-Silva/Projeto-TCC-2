@@ -13,4 +13,5 @@
     <string name="title_activity_patient_profile_screen">PatientProfileScreen</string>
     <string name="title_activity_registration_screen">RegistrationScreen</string>
     <string name="title_activity_splash_screen">SplashScreen</string>
+    <string name="title_activity_sleep_screen">SleepScreen</string>
 </resources>

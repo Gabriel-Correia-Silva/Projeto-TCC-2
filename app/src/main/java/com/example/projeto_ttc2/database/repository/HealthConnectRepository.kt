@@ -4,16 +4,19 @@ import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
+import com.example.projeto_ttc2.database.dao.CaloriasDao
 import com.example.projeto_ttc2.database.dao.PassosDao
 import com.example.projeto_ttc2.database.dao.SonoDao
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.entities.Calorias
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
 import kotlinx.coroutines.flow.Flow
@@ -29,7 +32,8 @@ import javax.inject.Singleton
 class HealthConnectRepository @Inject constructor(
     private val batimentoCardiacoDao: BatimentoCardiacoDao,
     private val passosDao: PassosDao,
-    private val sonoDao: SonoDao
+    private val sonoDao: SonoDao,
+    private val caloriasDao: CaloriasDao
 ) {
     private var healthConnectClient: HealthConnectClient? = null
     private val TAG = "HealthConnectRepository"
@@ -146,6 +150,53 @@ class HealthConnectRepository @Inject constructor(
         }
     }
 
+    suspend fun syncCaloriesData() {
+        val client = healthConnectClient ?: return
+        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        val now = Instant.now()
+        val timeRangeFilter = TimeRangeFilter.between(startOfDay, now)
+
+        val activeCaloriesRequest = ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, timeRangeFilter)
+        val totalCaloriesRequest = ReadRecordsRequest(TotalCaloriesBurnedRecord::class, timeRangeFilter)
+
+        try {
+            val activeResponse = client.readRecords(activeCaloriesRequest)
+            val activeEntities = activeResponse.records.map { record ->
+                Calorias(
+                    healthConnectId = record.metadata.id,
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    kilocalorias = record.energy.inKilocalories,
+                    tipo = "ATIVA"
+                )
+            }
+            if (activeEntities.isNotEmpty()) {
+                caloriasDao.insertAll(activeEntities)
+                Log.d(TAG, "${activeEntities.size} registros de calorias ativas inseridos.")
+            }
+
+            val totalResponse = client.readRecords(totalCaloriesRequest)
+            val totalEntities = totalResponse.records.map { record ->
+                Calorias(
+                    healthConnectId = record.metadata.id,
+                    startTime = record.startTime,
+                    endTime = record.endTime,
+                    kilocalorias = record.energy.inKilocalories,
+                    tipo = "TOTAL"
+                )
+            }
+            if (totalEntities.isNotEmpty()) {
+                caloriasDao.insertAll(totalEntities)
+                Log.d(TAG, "${totalEntities.size} registros de calorias totais inseridos.")
+            }
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao sincronizar dados de calorias", e)
+            throw e // Re-lança a exceção para que o ViewModel possa tratá-la
+        }
+    }
+
+
     fun getLatestHeartRate(): Flow<Long> {
         return batimentoCardiacoDao.getUltimoBatimento().map { it?.bpm ?: 0L }
     }
@@ -158,11 +209,23 @@ class HealthConnectRepository @Inject constructor(
         return sonoDao.getUltimaSessaoSono()
     }
 
+    fun getTodayActiveCalories(): Flow<Double> {
+        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        return caloriasDao.getSomaCaloriasPorTipoDesde("ATIVA", startOfDay).map { it ?: 0.0 }
+    }
+
+    fun getTodayTotalCalories(): Flow<Double> {
+        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        return caloriasDao.getSomaCaloriasPorTipoDesde("TOTAL", startOfDay).map { it ?: 0.0 }
+    }
+
     companion object {
         val REQUIRED_PERMISSIONS = setOf(
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getReadPermission(StepsRecord::class),
-            HealthPermission.getReadPermission(SleepSessionRecord::class)
+            HealthPermission.getReadPermission(SleepSessionRecord::class),
+            HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
         )
     }
 }

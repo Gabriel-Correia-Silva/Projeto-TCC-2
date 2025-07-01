@@ -1,6 +1,7 @@
 package com.example.projeto_ttc2.presentation.navigation
 
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -11,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,12 +25,11 @@ import com.example.projeto_ttc2.presentation.state.UiState
 import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
 import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
+import com.example.projeto_ttc2.presentation.ui.screen.SleepScreen
 import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-
-
 
 @Composable
 fun AppNavigation(
@@ -38,7 +39,6 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
-
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val userRole by authViewModel.userRole.collectAsStateWithLifecycle()
     val uiState by healthConnectViewModel.uiState
@@ -46,6 +46,25 @@ fun AppNavigation(
     val todaySteps by healthConnectViewModel.todaySteps.collectAsStateWithLifecycle()
     val todayDistanceKm by healthConnectViewModel.todayDistanceKm.collectAsStateWithLifecycle()
     val sleepSession by healthConnectViewModel.latestSleepSession.collectAsStateWithLifecycle()
+    val activeCalories by healthConnectViewModel.todayActiveCalories.collectAsStateWithLifecycle()
+    val totalCalories by healthConnectViewModel.todayTotalCalories.collectAsStateWithLifecycle()
+
+    // Lançador para a tela de permissões do Health Connect
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { grantedPermissions ->
+        // Envia o resultado da permissão de volta para o ViewModel
+        healthConnectViewModel.onPermissionsResult(grantedPermissions)
+    }
+
+    // Observa o canal do ViewModel para lançar a solicitação de permissão quando necessário
+    LaunchedEffect(Unit) {
+        healthConnectViewModel.permissionRequestChannel.collect { permissionsToRequest ->
+            if (permissionsToRequest.isNotEmpty()) {
+                permissionLauncher.launch(permissionsToRequest)
+            }
+        }
+    }
 
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
@@ -69,7 +88,7 @@ fun AppNavigation(
             is AuthState.Error -> {
 
             }
-            else -> { // Unauthenticated
+            else -> {
                 if (navController.currentBackStackEntry?.destination?.route != "login") {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
@@ -106,21 +125,23 @@ fun AppNavigation(
         composable("supervised_dashboard") {
             val context = LocalContext.current
 
-
             LaunchedEffect(Unit) {
-                healthConnectViewModel.syncData()
+                healthConnectViewModel.initialLoad(context)
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 val currentUser = Firebase.auth.currentUser
                 SupervisedDashboardScreen(
+                    navController = navController,
                     userName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
 
                     dashboardData = DashboardData(
                         heartRate = latestBpm,
                         steps = todaySteps,
                         distanceKm = todayDistanceKm,
-                        sleepSession = sleepSession
+                        sleepSession = sleepSession,
+                        activeCaloriesKcal = activeCalories,
+                        caloriesKcal = totalCalories
                     ),
                     onSosClick = { /* Lógica do botao SOS */ },
                     onLogout = { authViewModel.signOut() },
@@ -141,6 +162,10 @@ fun AppNavigation(
                     else -> {}
                 }
             }
+        }
+
+        composable("sleep_screen") {
+            SleepScreen(navController = navController, sleepData = sleepSession)
         }
 
         composable(

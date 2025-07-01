@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
+import com.example.projeto_ttc2.database.dao.CaloriasDao
 import com.example.projeto_ttc2.database.dao.PassosDao
 import com.example.projeto_ttc2.database.dao.SonoDao
 import com.google.firebase.auth.FirebaseAuth
@@ -21,7 +22,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = Firebase.auth
@@ -29,7 +29,6 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
-
 
     @Provides
     @Singleton
@@ -56,5 +55,11 @@ object AppModule {
     @Provides
     fun provideSonoDao(appDatabase: AppDatabase): SonoDao {
         return appDatabase.sonoDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideCaloriasDao(appDatabase: AppDatabase): CaloriasDao {
+        return appDatabase.caloriasDao()
     }
 }

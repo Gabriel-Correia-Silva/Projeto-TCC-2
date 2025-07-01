@@ -1,6 +1,7 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -10,8 +11,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projeto_ttc2.database.entities.Sono
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SleepCard(sleepSession: Sono?) {
+fun SleepCard(sleepSession: Sono?, onClick: () -> Unit) {
     fun formatDuration(minutes: Long?): String {
         if (minutes == null || minutes <= 0) return "--"
         val hours = minutes / 60
@@ -21,7 +23,7 @@ fun SleepCard(sleepSession: Sono?) {
 
     val totalDurationText = formatDuration(sleepSession?.durationMinutes)
 
-    DashboardCard {
+    DashboardCard(onClick = onClick) {
         Text("Sono", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 

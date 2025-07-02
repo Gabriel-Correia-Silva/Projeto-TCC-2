@@ -174,9 +174,16 @@ fun AppNavigation(
                     onNavigateToSleep = { navController.navigate("sleep_screen") }
                 )
             }
+            composable("profile_screen") {
+                ProfileScreen(
+                    userName = Firebase.auth.currentUser?.displayName ?: "Usuário",
+                    userEmail = Firebase.auth.currentUser?.email ?: "email@exemplo.com"
+                    // Adicione outros parâmetros se necessário
+                )
+            }
 
             composable("settings_screen") {
-                SettingsScreen()
+                SettingsScreen(navController = navController)
             }
 
             composable("sleep_screen") {

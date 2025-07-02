@@ -17,31 +17,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 val TealColor = Color(0xFF4DB6AC)
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        SettingsItem(icon = Icons.Default.Person, text = "Perfil")
-        SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno")
-        SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência")
-        SettingsItem(icon = Icons.Default.Notifications, text = "Notificações")
-        SettingsItem(icon = Icons.Default.Sensors, text = "Sensores")
-        SettingsItem(icon = Icons.Default.Palette, text = "Tema")
-        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair")
+        SettingsItem(icon = Icons.Default.Person, text = "Perfil") {
+            navController.navigate("profile_screen")
+        }
+        SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.Sensors, text = "Sensores") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO */ }
     }
 }
 
 @Composable
-fun SettingsItem(icon: ImageVector, text: String) {
+fun SettingsItem(icon: ImageVector, text: String, onClick: () -> Unit) {
     Button(
-        onClick = { /* TODO: Navegar para o item específico */ },
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp),
@@ -67,5 +71,5 @@ fun SettingsItem(icon: ImageVector, text: String) {
 @Preview(showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
-    SettingsScreen()
+    SettingsScreen(navController = rememberNavController())
 }

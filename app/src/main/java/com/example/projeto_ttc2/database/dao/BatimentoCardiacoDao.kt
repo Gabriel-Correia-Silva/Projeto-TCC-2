@@ -14,7 +14,7 @@ interface BatimentoCardiacoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(batimentos: List<BatimentoCardiaco>)
 
-    @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp BETWEEN :inicio AND :fim ORDER BY timestamp DESC")
+    @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp BETWEEN :inicio AND :fim ORDER BY timestamp ASC")
     fun getBatimentosDoPeriodo(inicio: Instant, fim: Instant): Flow<List<BatimentoCardiaco>>
 
     @Query("SELECT * FROM batimentos_cardiacos ORDER BY timestamp DESC LIMIT 1")
@@ -32,4 +32,7 @@ interface BatimentoCardiacoDao {
     @Query("DELETE FROM batimentos_cardiacos")
     suspend fun limparTodos()
 
+    // Nova função para buscar dados de hoje ordenados cronologicamente
+    @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp >= :startOfDay ORDER BY timestamp ASC")
+    fun getBatimentosDesdeInicioDoDia(startOfDay: Instant): Flow<List<BatimentoCardiaco>>
 }

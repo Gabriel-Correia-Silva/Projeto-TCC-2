@@ -1,5 +1,6 @@
 package com.example.projeto_ttc2.presentation.ui.screen
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -22,7 +23,7 @@ class SplashActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
-            healthConnectViewModel.initializeRepository(this@SplashActivity)
+            healthConnectViewModel.initialLoad(this@SplashActivity)
             if (healthConnectViewModel.hasAllPermissions()) {
                 healthConnectViewModel.syncData().join()
                 navigateToMain()

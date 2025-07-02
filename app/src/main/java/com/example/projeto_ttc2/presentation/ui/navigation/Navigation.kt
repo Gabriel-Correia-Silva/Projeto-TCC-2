@@ -1,32 +1,26 @@
 package com.example.projeto_ttc2.presentation.navigation
 
-
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.state.AuthState
 import com.example.projeto_ttc2.presentation.state.UiState
 import com.example.projeto_ttc2.presentation.state.UserRole
-import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
-import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
-import com.example.projeto_ttc2.presentation.ui.screen.SleepScreen
-import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
+import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
+import com.example.projeto_ttc2.presentation.ui.screen.*
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -35,36 +29,35 @@ import com.google.firebase.ktx.Firebase
 fun AppNavigation(
     authViewModel: AuthViewModel,
     healthConnectViewModel: HealthConnectViewModel,
+    dashboardViewModel: DashboardViewModel,
     googleSignInLauncher: () -> Unit
 ) {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    val routesWithHeader = listOf("supervisor_dashboard", "supervised_dashboard", "settings_screen", "sleep_screen")
+
+    fun getTitleForRoute(route: String?, userName: String): String {
+        return when (route) {
+            "supervisor_dashboard" -> "Olá, $userName"
+            "supervised_dashboard" -> "Olá, $userName"
+            "settings_screen" -> "Configurações"
+            "sleep_screen" -> "Sono"
+            else -> "App"
+        }
+    }
 
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val userRole by authViewModel.userRole.collectAsStateWithLifecycle()
     val uiState by healthConnectViewModel.uiState
-    val latestBpm by healthConnectViewModel.latestHeartRate.collectAsStateWithLifecycle(initialValue = 0L)
-    val todaySteps by healthConnectViewModel.todaySteps.collectAsStateWithLifecycle()
-    val todayDistanceKm by healthConnectViewModel.todayDistanceKm.collectAsStateWithLifecycle()
-    val sleepSession by healthConnectViewModel.latestSleepSession.collectAsStateWithLifecycle()
-    val activeCalories by healthConnectViewModel.todayActiveCalories.collectAsStateWithLifecycle()
-    val totalCalories by healthConnectViewModel.todayTotalCalories.collectAsStateWithLifecycle()
-
-    // Lançador para a tela de permissões do Health Connect
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { grantedPermissions ->
-        // Envia o resultado da permissão de volta para o ViewModel
-        healthConnectViewModel.onPermissionsResult(grantedPermissions)
-    }
-
-    // Observa o canal do ViewModel para lançar a solicitação de permissão quando necessário
-    LaunchedEffect(Unit) {
-        healthConnectViewModel.permissionRequestChannel.collect { permissionsToRequest ->
-            if (permissionsToRequest.isNotEmpty()) {
-                permissionLauncher.launch(permissionsToRequest)
-            }
-        }
-    }
+    val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
+    val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
+    val todaySteps by dashboardViewModel.todaySteps.collectAsStateWithLifecycle()
+    val todayDistanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
+    val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
+    val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
+    val totalCalories by dashboardViewModel.todayTotalCalories.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
@@ -74,22 +67,22 @@ fun AppNavigation(
                     is UserRole.Supervised -> "supervised_dashboard"
                     else -> null
                 }
-                destination?.let {
-                    navController.navigate(it) {
+                if (destination != null && destination != currentRoute) {
+                    navController.navigate(destination) {
                         popUpTo("login") { inclusive = true }
                     }
                 }
             }
             is AuthState.NeedsRegistration -> {
-                navController.navigate("registration") {
-                    popUpTo("login") { inclusive = true }
+                if (currentRoute != "registration") {
+                    navController.navigate("registration") { popUpTo("login") { inclusive = true } }
                 }
             }
             is AuthState.Error -> {
-
+                // Não faz nada aqui para evitar navegações inesperadas
             }
             else -> {
-                if (navController.currentBackStackEntry?.destination?.route != "login") {
+                if (currentRoute !in listOf("login", "registration")) {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
@@ -98,43 +91,51 @@ fun AppNavigation(
         }
     }
 
-
-    NavHost(navController = navController, startDestination = "login") {
-        composable("login") {
-            LoginScreen(onSignInRequested = googleSignInLauncher)
-        }
-
-        composable("registration") {
-            val currentState = authState
-            if (currentState is AuthState.NeedsRegistration) {
-                RegistrationScreen(
-                    user = currentState.user,
-                    onRegister = { name, role, supervisorId ->
-                        authViewModel.registerUser(currentState.user, name, role, supervisorId)
-                    }
+    Scaffold(
+        topBar = {
+            if (currentRoute in routesWithHeader) {
+                MainAppHeader(
+                    title = getTitleForRoute(
+                        currentRoute,
+                        Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário"
+                    ),
+                    onSettingsClick = { navController.navigate("settings_screen") },
+                    onNotificationsClick = { /* TODO: Navegar para notificações */ },
+                    onLogout = { authViewModel.signOut() }
                 )
-            } else {
-                LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
-
-        composable("supervisor_dashboard") {
-            Text("Supervisor Dashboard - Logado!")
-        }
-
-        composable("supervised_dashboard") {
-            val context = LocalContext.current
-
-            LaunchedEffect(Unit) {
-                healthConnectViewModel.initialLoad(context)
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "login",
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable("login") {
+                LoginScreen(onSignInRequested = googleSignInLauncher)
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                val currentUser = Firebase.auth.currentUser
+            composable("registration") {
+                val currentState = authState
+                if (currentState is AuthState.NeedsRegistration) {
+                    RegistrationScreen(
+                        user = currentState.user,
+                        onRegister = { name, role, supervisorId ->
+                            authViewModel.registerUser(currentState.user, name, role, supervisorId)
+                        }
+                    )
+                } else {
+                    LaunchedEffect(Unit) { navController.popBackStack() }
+                }
+            }
+
+            composable("supervisor_dashboard") {
+                val context = LocalContext.current
+                LaunchedEffect(Unit) {
+                    healthConnectViewModel.initialLoad(context)
+                }
                 SupervisedDashboardScreen(
-                    navController = navController,
-                    userName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
-
+                    userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
                     dashboardData = DashboardData(
                         heartRate = latestBpm,
                         steps = todaySteps,
@@ -143,37 +144,52 @@ fun AppNavigation(
                         activeCaloriesKcal = activeCalories,
                         caloriesKcal = totalCalories
                     ),
-                    onSosClick = { /* Lógica do botao SOS */ },
-                    onLogout = { authViewModel.signOut() },
+                    heartRateData = todayHeartRateData,
+                    onSosClick = { /* Lógica do botão SOS */ },
                     isRefreshing = uiState is UiState.Loading,
-                    onRefresh = { healthConnectViewModel.syncData() }
+                    onRefresh = { healthConnectViewModel.syncData() },
+                    onNavigateToSleep = { navController.navigate("sleep_screen") }
                 )
-
-                when (val state = uiState) {
-                    is UiState.Loading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-                    is UiState.Error -> {
-                        Text(
-                            text = "Erro: ${state.message}",
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                    else -> {}
-                }
             }
-        }
 
-        composable("sleep_screen") {
-            SleepScreen(navController = navController, sleepData = sleepSession)
-        }
+            composable("supervised_dashboard") {
+                val context = LocalContext.current
+                LaunchedEffect(Unit) {
+                    healthConnectViewModel.initialLoad(context)
+                }
+                SupervisedDashboardScreen(
+                    userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
+                    dashboardData = DashboardData(
+                        heartRate = latestBpm,
+                        steps = todaySteps,
+                        distanceKm = todayDistanceKm,
+                        sleepSession = sleepSession,
+                        activeCaloriesKcal = activeCalories,
+                        caloriesKcal = totalCalories
+                    ),
+                    heartRateData = todayHeartRateData,
+                    onSosClick = { /* Lógica do botão SOS */ },
+                    isRefreshing = uiState is UiState.Loading,
+                    onRefresh = { healthConnectViewModel.syncData() },
+                    onNavigateToSleep = { navController.navigate("sleep_screen") }
+                )
+            }
 
-        composable(
-            "error/{message}",
-            arguments = listOf(navArgument("message") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val message = backStackEntry.arguments?.getString("message") ?: "Ocorreu um erro."
-            Text("Erro: $message")
+            composable("settings_screen") {
+                SettingsScreen()
+            }
+
+            composable("sleep_screen") {
+                SleepScreen(navController = navController, sleepData = sleepSession)
+            }
+
+            composable(
+                "error/{message}",
+                arguments = listOf(navArgument("message") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val message = backStackEntry.arguments?.getString("message") ?: "Ocorreu um erro."
+                Text("Erro: $message")
+            }
         }
     }
 }

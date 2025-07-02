@@ -10,15 +10,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -27,25 +24,23 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.projeto_ttc2.database.entities.Sono
+import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
+import com.example.projeto_ttc2.presentation.ui.theme.LightTeal
+import com.example.projeto_ttc2.presentation.ui.theme.DarkText
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.math.atan2
 
-// Cores
-private val DarkTeal = Color(0xFF388E8A)
-private val MediumTeal = Color(0xFF4DB6AC)
-private val LightTeal = Color(0xFFB2DFDB)
-private val BackgroundTeal = Color(0xFFE0F2F1)
+// Cores seguindo o padrão do theme
+private val DarkTeal = DarkText
+private val MediumTeal = TealGreen
+private val AppLightTeal = LightTeal
 private val LightBlue = Color(0xFF4DD0E1)
 private val AwakeGray = Color(0xFFBDBDBD)
-private val FabRed = Color(0xFFE53935)
 
-// --- SOLUÇÃO APLICADA AQUI ---
-// A classe agora é 'internal', visível dentro do módulo do app.
 internal data class SleepSlice(
     val label: String,
     val color: Color,
@@ -54,7 +49,6 @@ internal data class SleepSlice(
     var endAngle: Float = 0f
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepScreen(navController: NavController, sleepData: Sono?) {
     val allSlices = remember(sleepData) {
@@ -66,7 +60,7 @@ fun SleepScreen(navController: NavController, sleepData: Sono?) {
 
         listOf(
             SleepSlice("Sono profundo", DarkTeal, deepMinutes / totalSleep),
-            SleepSlice("Sono leve", LightTeal, lightMinutes / totalSleep),
+            SleepSlice("Sono leve", AppLightTeal, lightMinutes / totalSleep),
             SleepSlice("Sono REM", LightBlue, remMinutes / totalSleep),
             SleepSlice("Acordado", AwakeGray, awakeMinutes / totalSleep)
         )
@@ -76,58 +70,30 @@ fun SleepScreen(navController: NavController, sleepData: Sono?) {
         mutableStateOf(allSlices.firstOrNull())
     }
 
-    Scaffold(
-        containerColor = BackgroundTeal,
-        topBar = { SleepTopAppBar(onBackClicked = { navController.popBackStack() }) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Lógica SOS */ },
-                containerColor = FabRed,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(72.dp)
-            ) {
-                Icon(Icons.Default.Call, "Botão de Emergência", Modifier.size(36.dp))
-            }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            SleepSummaryCard(sleepData = sleepData)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        SleepSummaryCard(sleepData = sleepData)
 
-            SleepDonutChart(
-                drawableSlices = allSlices.filter { it.proportion > 0 },
-                selectedSlice = selectedSlice,
-                onSliceSelected = { slice -> selectedSlice = slice }
-            )
+        SleepDonutChart(
+            drawableSlices = allSlices.filter { it.proportion > 0 },
+            allSlices = allSlices,
+            selectedSlice = selectedSlice,
+            onSliceSelected = { slice -> selectedSlice = slice },
+            modifier = Modifier.padding(vertical = 32.dp, horizontal = 16.dp)
+        )
 
-            SleepLegend(
-                allSlices = allSlices,
-                onItemClick = { slice -> selectedSlice = slice }
-            )
-        }
+        SleepLegend(
+            allSlices = allSlices,
+            selectedSlice = selectedSlice,
+            onItemClick = { slice -> selectedSlice = slice }
+        )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SleepTopAppBar(onBackClicked: () -> Unit) {
-    TopAppBar(
-        title = { Text("Detalhes do Sono", color = DarkTeal, fontWeight = FontWeight.Bold) },
-        navigationIcon = {
-            IconButton(onClick = onBackClicked) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = DarkTeal)
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-    )
 }
 
 @Composable
@@ -151,20 +117,42 @@ fun SleepSummaryCard(sleepData: Sono?) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Bedtime, contentDescription = "Ícone de sono", tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Sono geral", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Sono geral",
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
             }
+
             SleepBarChart(sleepData = sleepData)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Duração do sono: ${formatDuration(sleepData?.durationMinutes)}", color = Color.White)
-                    Text("Sono profundo: ${formatDuration(sleepData?.deepSleepDurationMinutes)}", color = Color.White)
-                    Text("Sono leve: ${formatDuration(sleepData?.lightSleepDurationMinutes)}", color = Color.White)
-                    Text("Sono REM: ${formatDuration(sleepData?.remSleepDurationMinutes)}", color = Color.White)
-                    Text("Acordado: ${formatDuration(sleepData?.awakeDurationMinutes)}", color = Color.White)
-                }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Duração do sono: ${formatDuration(sleepData?.durationMinutes)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Sono profundo: ${formatDuration(sleepData?.deepSleepDurationMinutes)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Sono leve: ${formatDuration(sleepData?.lightSleepDurationMinutes)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Sono REM: ${formatDuration(sleepData?.remSleepDurationMinutes)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    "Acordado: ${formatDuration(sleepData?.awakeDurationMinutes)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }
@@ -180,7 +168,7 @@ fun SleepBarChart(sleepData: Sono?) {
 
     val validPhases = listOf(
         SleepPhase(deep, DarkTeal),
-        SleepPhase(light, LightTeal),
+        SleepPhase(light, AppLightTeal),
         SleepPhase(rem, LightBlue),
         SleepPhase(awake, AwakeGray)
     ).filter { it.duration > 0f }
@@ -204,8 +192,10 @@ fun SleepBarChart(sleepData: Sono?) {
 @Composable
 internal fun SleepDonutChart(
     drawableSlices: List<SleepSlice>,
+    allSlices: List<SleepSlice>,
     selectedSlice: SleepSlice?,
-    onSliceSelected: (SleepSlice) -> Unit
+    onSliceSelected: (SleepSlice) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val slicesToDraw = remember(drawableSlices) {
         var currentAngle = -90f
@@ -220,7 +210,7 @@ internal fun SleepDonutChart(
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
+        modifier = modifier
             .size(250.dp)
             .pointerInput(slicesToDraw) {
                 detectTapGestures { offset ->
@@ -246,19 +236,20 @@ internal fun SleepDonutChart(
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            val percentageToShow = ((selectedSlice?.proportion ?: 0f) * 100).toInt()
-            val labelToShow = selectedSlice?.label ?: "Sem dados"
+            val currentSlice = allSlices.find { it.label == selectedSlice?.label }
+            val percentageToShow = ((currentSlice?.proportion ?: 0f) * 100).toInt()
+            val labelToShow = currentSlice?.label ?: "Sem dados"
 
             Text(
                 text = "$percentageToShow%",
-                fontSize = 48.sp,
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
-                color = selectedSlice?.color ?: DarkTeal
+                color = currentSlice?.color ?: DarkTeal
             )
             Text(
                 text = labelToShow,
-                fontSize = 18.sp,
-                color = Color.Gray
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
     }
@@ -268,6 +259,7 @@ internal fun SleepDonutChart(
 @Composable
 internal fun SleepLegend(
     allSlices: List<SleepSlice>,
+    selectedSlice: SleepSlice?,
     onItemClick: (SleepSlice) -> Unit
 ) {
     FlowRow(
@@ -280,6 +272,7 @@ internal fun SleepLegend(
             LegendItem(
                 color = slice.color,
                 text = slice.label,
+                isSelected = slice.label == selectedSlice?.label,
                 modifier = Modifier
                     .weight(1f)
                     .clickable(
@@ -292,10 +285,21 @@ internal fun SleepLegend(
 }
 
 @Composable
-fun LegendItem(color: Color, text: String, modifier: Modifier = Modifier) {
+fun LegendItem(
+    color: Color,
+    text: String,
+    isSelected: Boolean = false,
+    modifier: Modifier = Modifier
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        modifier = modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(
+                color = if (isSelected) color.copy(alpha = 0.2f) else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(4.dp)
     ) {
         Box(
             modifier = Modifier
@@ -304,7 +308,12 @@ fun LegendItem(color: Color, text: String, modifier: Modifier = Modifier) {
                 .background(color)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, color = Color.Gray, fontSize = 16.sp)
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 

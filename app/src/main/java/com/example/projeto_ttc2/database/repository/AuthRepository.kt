@@ -13,6 +13,10 @@ class AuthRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) {
+    fun getCurrentUser(): FirebaseUser? {
+        return auth.currentUser
+    }
+
     suspend fun signInWithGoogle(idToken: String): AuthResult {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)

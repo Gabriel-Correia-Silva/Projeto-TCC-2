@@ -102,4 +102,11 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+// Para Hilt e WorkManager
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
+// WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
 }

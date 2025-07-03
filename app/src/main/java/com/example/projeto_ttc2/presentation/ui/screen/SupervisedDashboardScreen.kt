@@ -7,10 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.ui.components.*
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,7 +24,14 @@ fun SupervisedDashboardScreen(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onNavigateToSleep: () -> Unit
+
 ) {
+    LaunchedEffect(Unit) {
+        while (true) {
+            onRefresh()
+            delay(30000)
+        }
+    }
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,

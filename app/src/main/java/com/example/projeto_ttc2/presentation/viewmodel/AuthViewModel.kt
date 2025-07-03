@@ -25,6 +25,20 @@ class AuthViewModel @Inject constructor(
     private val _userRole = MutableStateFlow<UserRole?>(null)
     val userRole: StateFlow<UserRole?> = _userRole
 
+    init {
+        checkCurrentUser()
+    }
+
+    private fun checkCurrentUser() {
+        viewModelScope.launch {
+            val currentUser = repository.getCurrentUser()
+            if (currentUser != null) {
+                _authState.value = AuthState.Loading
+                fetchUserRole(currentUser.uid)
+            }
+        }
+    }
+
     fun signInWithGoogle(idToken: String) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {

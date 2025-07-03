@@ -6,12 +6,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.projeto_ttc2.database.repository.*
+import com.example.projeto_ttc2.database.repository.HealthConnectManager
+import com.example.projeto_ttc2.database.repository.SyncRepository
 import com.example.projeto_ttc2.presentation.state.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
@@ -20,16 +19,12 @@ import javax.inject.Inject
 @HiltViewModel
 class HealthConnectViewModel @Inject constructor(
     private val healthConnectManager: HealthConnectManager,
-    private val heartRateRepository: HeartRateRepository,
-    private val stepsRepository: StepsRepository,
-    private val sleepRepository: SleepRepository,
-    private val caloriesRepository: CaloriesRepository
+    private val syncRepository: SyncRepository
 ) : ViewModel() {
 
     private val TAG = "HealthConnectViewModel"
     private var isRequestingPermission = false
 
-    // Adicione esta linha
     val permissions: Set<String> = HealthConnectManager.REQUIRED_PERMISSIONS
 
     val uiState = mutableStateOf<UiState>(UiState.Uninitialized)
@@ -84,13 +79,7 @@ class HealthConnectViewModel @Inject constructor(
         return viewModelScope.launch {
             uiState.value = UiState.Loading
             try {
-                val syncTasks = listOf(
-                    async { heartRateRepository.syncData() },
-                    async { stepsRepository.syncData() },
-                    async { sleepRepository.syncData() },
-                    async { caloriesRepository.syncData() }
-                )
-                syncTasks.awaitAll()
+                syncRepository.syncAllData()
                 uiState.value = UiState.Success
             } catch (e: Exception) {
                 Log.e(TAG, "FALHA ao sincronizar dados.", e)

@@ -29,6 +29,9 @@ class HealthConnectViewModel @Inject constructor(
     private val TAG = "HealthConnectViewModel"
     private var isRequestingPermission = false
 
+    // Adicione esta linha
+    val permissions: Set<String> = HealthConnectManager.REQUIRED_PERMISSIONS
+
     val uiState = mutableStateOf<UiState>(UiState.Uninitialized)
     private val _permissionRequestChannel = Channel<Set<String>>()
     val permissionRequestChannel = _permissionRequestChannel.receiveAsFlow()

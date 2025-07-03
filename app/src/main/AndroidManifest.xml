@@ -28,39 +28,17 @@
         android:theme="@style/Theme.ProjetoTTC2"
         tools:targetApi="31">
         <activity
-            android:name=".presentation.ui.screen.ProfileScreen"
-            android:exported="false"
-            android:label="@string/title_activity_profile_screen"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.SettingsScreen"
-            android:exported="false"
-            android:label="@string/title_activity_settings_screen"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.SleepScreen"
-            android:exported="false"
-            android:label="@string/title_activity_sleep_screen"
-            android:theme="@style/Theme.ProjetoTTC2" />
-        <activity
-            android:name=".presentation.ui.screen.SplashActivity"
-            android:exported="true"
-            android:theme="@style/Theme.ProjetoTTC2">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity> <!-- MainActivity (sem o LAUNCHER) -->
-        <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
             android:label="@string/title_activity_main"
             android:theme="@style/Theme.ProjetoTTC2">
             <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
-
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity>

@@ -1,13 +1,16 @@
 package com.example.projeto_ttc2.presentation.navigation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,6 +27,7 @@ import com.example.projeto_ttc2.presentation.ui.screen.*
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
@@ -35,6 +39,13 @@ fun AppNavigation(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Inicializa o HealthConnectViewModel uma vez
+    LaunchedEffect(Unit) {
+        healthConnectViewModel.initialLoad(context)
+    }
 
     val routesWithHeader = listOf("supervisor_dashboard", "supervised_dashboard", "settings_screen", "sleep_screen")
 
@@ -59,6 +70,21 @@ fun AppNavigation(
     val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
     val totalCalories by dashboardViewModel.todayTotalCalories.collectAsStateWithLifecycle()
 
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        scope.launch {
+            if (granted.containsAll(healthConnectViewModel.permissions)) {
+                healthConnectViewModel.onPermissionsResult(granted)
+                navController.navigate("login") {
+                    popUpTo("splash_screen") { inclusive = true }
+                }
+            } else {
+                healthConnectViewModel.onPermissionsResult(granted)
+            }
+        }
+    }
+
     LaunchedEffect(authState, userRole) {
         when (val state = authState) {
             is AuthState.Authenticated -> {
@@ -70,20 +96,24 @@ fun AppNavigation(
                 if (destination != null && destination != currentRoute) {
                     navController.navigate(destination) {
                         popUpTo("login") { inclusive = true }
+                        popUpTo("splash_screen") { inclusive = true }
                     }
                 }
             }
             is AuthState.NeedsRegistration -> {
                 if (currentRoute != "registration") {
-                    navController.navigate("registration") { popUpTo("login") { inclusive = true } }
+                    navController.navigate("registration") {
+                        popUpTo("login") { inclusive = true }
+                        popUpTo("splash_screen") { inclusive = true }
+                    }
                 }
             }
             is AuthState.Error -> {
                 // Não faz nada aqui para evitar navegações inesperadas
             }
             else -> {
-                if (currentRoute !in listOf("login", "registration")) {
-                    navController.navigate("login") {
+                if (currentRoute !in listOf("login", "registration", "splash_screen")) {
+                    navController.navigate("splash_screen") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
@@ -108,9 +138,32 @@ fun AppNavigation(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "login",
+            startDestination = "splash_screen",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("splash_screen") {
+                LaunchedEffect(uiState) {
+                    if (healthConnectViewModel.hasAllPermissions()) {
+                        navController.navigate("login") {
+                            popUpTo("splash_screen") { inclusive = true }
+                        }
+                    }
+                }
+                SplashScreen(
+                    onContinueClick = {
+                        scope.launch {
+                            if (healthConnectViewModel.hasAllPermissions()) {
+                                navController.navigate("login") {
+                                    popUpTo("splash_screen") { inclusive = true }
+                                }
+                            } else {
+                                requestPermissionLauncher.launch(healthConnectViewModel.permissions)
+                            }
+                        }
+                    }
+                )
+            }
+
             composable("login") {
                 LoginScreen(onSignInRequested = googleSignInLauncher)
             }
@@ -130,10 +183,6 @@ fun AppNavigation(
             }
 
             composable("supervisor_dashboard") {
-                val context = LocalContext.current
-                LaunchedEffect(Unit) {
-                    healthConnectViewModel.initialLoad(context)
-                }
                 SupervisedDashboardScreen(
                     userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
                     dashboardData = DashboardData(
@@ -153,10 +202,6 @@ fun AppNavigation(
             }
 
             composable("supervised_dashboard") {
-                val context = LocalContext.current
-                LaunchedEffect(Unit) {
-                    healthConnectViewModel.initialLoad(context)
-                }
                 SupervisedDashboardScreen(
                     userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
                     dashboardData = DashboardData(

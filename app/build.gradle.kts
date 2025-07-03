@@ -71,6 +71,7 @@ dependencies {
     // Hilt (a BOM gerencia as versões)
     implementation(libs.hilt.android)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.firebase.storage.ktx)
     ksp(libs.hilt.compiler) // ESSENCIAL: 'ksp' para o compilador do Hilt
     implementation(libs.hilt.navigation.compose)
 

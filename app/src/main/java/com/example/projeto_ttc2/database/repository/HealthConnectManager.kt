@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class HealthConnectManager @Inject constructor() {
+class HealthConnectManager @Inject constructor(context: Context) {
     private var healthConnectClient: HealthConnectClient? = null
 
     val client: HealthConnectClient

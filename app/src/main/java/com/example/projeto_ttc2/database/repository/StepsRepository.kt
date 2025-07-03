@@ -17,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class StepsRepository @Inject constructor(
     private val passosDao: PassosDao,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
 ) {
     private val TAG = "StepsRepository"
 

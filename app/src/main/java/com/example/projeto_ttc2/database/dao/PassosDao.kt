@@ -14,4 +14,8 @@ interface PassosDao {
 
     @Query("SELECT * FROM passos WHERE data = :data")
     fun getPassosPorData(data: LocalDate): Flow<Passos?>
+
+    // Nova função para buscar passos dentro de um período
+    @Query("SELECT * FROM passos WHERE data BETWEEN :startDate AND :endDate ORDER BY data ASC")
+    fun getStepsInPeriod(startDate: LocalDate, endDate: LocalDate): Flow<List<Passos>>
 }

@@ -1,4 +1,3 @@
-// Local: com/example/projeto_ttc2/presentation/ui/screen/SupervisedDashboardScreen.kt
 package com.example.projeto_ttc2.presentation.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
@@ -23,24 +22,22 @@ fun SupervisedDashboardScreen(
     heartRateData: List<Long> = emptyList(),
     onSosClick: () -> Unit,
     isRefreshing: Boolean,
-    // PARÂMETROS MODIFICADOS AQUI
     onManualRefresh: () -> Unit,
     onBackgroundRefresh: () -> Unit,
     onNavigateToSleep: () -> Unit,
-    onNavigateToHeartRate: () -> Unit // Adicione este parâmetro
+    onNavigateToHeartRate: () -> Unit,
+    onNavigateToSteps: () -> Unit
 ) {
-    // LÓGICA MODIFICADA AQUI
     LaunchedEffect(Unit) {
         while (true) {
-            onBackgroundRefresh() // Chama a atualização silenciosa
+            onBackgroundRefresh()
             delay(30000)
         }
     }
 
-    // LÓGICA MODIFICADA AQUI
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onManualRefresh, // Chama a atualização com indicador
+        onRefresh = onManualRefresh,
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -52,14 +49,15 @@ fun SupervisedDashboardScreen(
                 HeartRateCard(
                     bpm = dashboardData.heartRate,
                     heartRateData = heartRateData,
-                    onClick = onNavigateToHeartRate // Passe o lambda aqui
+                    onClick = onNavigateToHeartRate
                 )
             }
             item {
                 StepsCard(
                     steps = dashboardData.steps,
                     goal = dashboardData.stepsGoal,
-                    distanceKm = dashboardData.distanceKm
+                    distanceKm = dashboardData.distanceKm,
+                    onClick = onNavigateToSteps
                 )
             }
             item {

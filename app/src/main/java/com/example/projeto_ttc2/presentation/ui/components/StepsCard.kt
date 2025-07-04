@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun StepsCard(steps: Long, goal: Long, distanceKm: Double) {
+fun StepsCard(steps: Long, goal: Long, distanceKm: Double, onClick: () -> Unit) {
     val progress = if (goal > 0) (steps.toFloat() / goal.toFloat()) else 0f
-    DashboardCard {
+    DashboardCard(onClick = onClick) {
         Text("Passos", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(

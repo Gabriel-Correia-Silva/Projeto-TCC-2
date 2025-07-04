@@ -58,6 +58,7 @@ fun AppNavigation(
         "sleep_screen",
         "emergency_contacts_screen",
         "heart_rate_detail_screen",
+        "steps_detail_screen",
         "profile_screen",
         "night_monitoring_screen"
     )
@@ -68,6 +69,7 @@ fun AppNavigation(
             "sleep_screen" -> "Sono"
             "emergency_contacts_screen" -> "Contatos de Emergência"
             "heart_rate_detail_screen" -> "Frequência Cardíaca"
+            "steps_detail_screen" -> "Passos"
             "profile_screen" -> "Perfil"
             "night_monitoring_screen" -> "Monitoramento Noturno"
             else -> "App"
@@ -242,7 +244,8 @@ fun AppNavigation(
                     onManualRefresh = { scope.launch { healthConnectViewModel.syncData() } },
                     onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(showIndicator = false) } },
                     onNavigateToSleep = { navController.navigate("sleep_screen") },
-                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") }
+                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") },
+                    onNavigateToSteps = { navController.navigate("steps_detail_screen") }
                 )
             }
 
@@ -263,7 +266,8 @@ fun AppNavigation(
                     onManualRefresh = { scope.launch { healthConnectViewModel.syncData() } },
                     onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(showIndicator = false) } },
                     onNavigateToSleep = { navController.navigate("sleep_screen") },
-                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") }
+                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") },
+                    onNavigateToSteps = { navController.navigate("steps_detail_screen") }
                 )
             }
 
@@ -296,6 +300,13 @@ fun AppNavigation(
                     currentBpm = latestBpm,
                     dashboardViewModel = dashboardViewModel,
                     onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable("steps_detail_screen") {
+                StepsDetailScreen(
+                    navController = navController, // Passando o NavController
+                    dashboardViewModel = dashboardViewModel,
                 )
             }
 

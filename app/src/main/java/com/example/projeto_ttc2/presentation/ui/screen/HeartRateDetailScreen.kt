@@ -41,18 +41,7 @@ fun HeartRateDetailScreen(
         dashboardViewModel.loadHeartRateForDate(selectedDate)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Frequência Cardíaca") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
+    Scaffold() { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -9,6 +9,8 @@ import com.example.projeto_ttc2.presentation.navigation.AppNavigation
 import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -28,16 +30,20 @@ class MainActivity : ComponentActivity() {
         try {
             val account = task.getResult(ApiException::class.java)
             if (account != null) {
-                authViewModel.handleSignInResult(account)
+                account.idToken?.let { idToken ->
+                    authViewModel.signInWithGoogle(idToken)
+                } ?: run {
+                    authViewModel.setError("Token de ID não encontrado")
+                }
             }
         } catch (e: ApiException) {
-            // authViewModel.handleSignInResult(null)
+            authViewModel.setError("Falha no login: ${e.message}")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        healthConnectViewModel.initialize(this)
+        healthConnectViewModel.initialLoad(this)
         setContent {
             ProjetoTTC2Theme {
                 AppNavigation(
@@ -45,13 +51,20 @@ class MainActivity : ComponentActivity() {
                     healthConnectViewModel = healthConnectViewModel,
                     dashboardViewModel = dashboardViewModel,
                     emergencyContactViewModel = emergencyContactViewModel,
-
                     googleSignInLauncher = {
-                        val signInIntent = authViewModel.getGoogleSignInClient(this).signInIntent
+                        val signInIntent = getGoogleSignInClient().signInIntent
                         googleSignInLauncher.launch(signInIntent)
                     }
                 )
             }
         }
+    }
+
+    private fun getGoogleSignInClient(): GoogleSignInClient {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(com.example.projeto_ttc2.R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        return GoogleSignIn.getClient(this, gso)
     }
 }

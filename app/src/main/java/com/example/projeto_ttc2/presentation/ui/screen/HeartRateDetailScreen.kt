@@ -105,8 +105,13 @@ fun HeartRateBarChart(
     val range = (maxBpm - minBpm).coerceAtLeast(1f)
 
     val density = LocalDensity.current
+
+    // Obter as cores fora do contexto Canvas
+    val primaryColor = colorScheme.primary
+    val onSurfaceColor = colorScheme.onSurface
+
     val textPaint = android.graphics.Paint().apply {
-        color = colorScheme.onSurface.hashCode()
+        color = onSurfaceColor.hashCode()
         textAlign = android.graphics.Paint.Align.CENTER
         textSize = with(density) { 12.sp.toPx() }
     }
@@ -147,7 +152,7 @@ fun HeartRateBarChart(
             if (bpm != null) {
                 val barHeight = ((bpm - minBpm) / range * chartHeight).coerceAtLeast(0f)
                 drawRect(
-                    color = colorScheme.primary,
+                    color = primaryColor, // Usando a cor obtida fora do Canvas
                     topLeft = Offset(x, chartHeight - barHeight),
                     size = Size(barWidth, barHeight)
                 )

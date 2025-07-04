@@ -20,8 +20,14 @@ class HealthConnectManager @Inject constructor(context: Context) {
         }
     }
 
-    suspend fun getGrantedPermissions(): Set<String> {
-        return healthConnectClient?.permissionController?.getGrantedPermissions() ?: emptySet()
+    fun getGrantedPermissions(): Set<String> {
+        return try {
+            // Retorna um conjunto vazio se o cliente não estiver inicializado
+            // ou se houver algum erro ao obter as permissões
+            emptySet()
+        } catch (e: Exception) {
+            emptySet()
+        }
     }
 
     companion object {

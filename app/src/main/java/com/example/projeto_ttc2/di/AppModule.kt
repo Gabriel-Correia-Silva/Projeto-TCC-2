@@ -81,6 +81,72 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideAuthRepository(
+        auth: FirebaseAuth,
+        firestore: FirebaseFirestore
+    ): AuthRepository {
+        return AuthRepository(auth, firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEmergencyContactRepository(
+        emergencyContactDao: EmergencyContactDao,
+        firestore: FirebaseFirestore,
+        auth: FirebaseAuth
+    ): EmergencyContactRepository {
+        return EmergencyContactRepository(emergencyContactDao, firestore, auth)
+    }
+
+    @Provides
+    @Singleton
+    fun provideHeartRateRepository(
+        batimentoCardiacoDao: BatimentoCardiacoDao,
+        healthConnectManager: HealthConnectManager
+    ): HeartRateRepository {
+        return HeartRateRepository(batimentoCardiacoDao, healthConnectManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideStepsRepository(
+        passosDao: PassosDao,
+        healthConnectManager: HealthConnectManager
+    ): StepsRepository {
+        return StepsRepository(passosDao, healthConnectManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSleepRepository(
+        sonoDao: SonoDao,
+        healthConnectManager: HealthConnectManager
+    ): SleepRepository {
+        return SleepRepository(sonoDao, healthConnectManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideCaloriesRepository(
+        caloriasDao: CaloriasDao,
+        healthConnectManager: HealthConnectManager
+    ): CaloriesRepository {
+        return CaloriesRepository(caloriasDao, healthConnectManager)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncRepository(
+        heartRateRepository: HeartRateRepository,
+        stepsRepository: StepsRepository,
+        sleepRepository: SleepRepository,
+        caloriesRepository: CaloriesRepository
+    ): SyncRepository {
+        return SyncRepository(heartRateRepository, stepsRepository, sleepRepository, caloriesRepository)
+    }
+
+    @Provides
+    @Singleton
     fun provideUserRepository(
         userDao: UserDao,
         firestore: FirebaseFirestore,

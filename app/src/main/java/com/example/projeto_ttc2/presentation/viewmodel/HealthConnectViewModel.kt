@@ -90,4 +90,26 @@ class HealthConnectViewModel @Inject constructor(
             }
         }
     }
+
+    // Adicionando métodos que estão sendo referenciados no Navigation.kt
+    fun permissionsGranted(context: Context, permissions: Set<String>? = null): Boolean {
+        return try {
+            if (permissions != null) {
+                permissions.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
+            } else {
+                // Verifica se já tem as permissões concedidas
+                val grantedPermissions = healthConnectManager.getGrantedPermissions()
+                grantedPermissions.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
+            }
+        } catch (e: Exception) {
+            false // Se há erro, assume que não tem permissões
+        }
+    }
+
+    fun requestPermissions(launcher: androidx.activity.result.ActivityResultLauncher<Set<String>>) {
+        if (!isRequestingPermission) {
+            isRequestingPermission = true
+            launcher.launch(HealthConnectManager.REQUIRED_PERMISSIONS)
+        }
+    }
 }

@@ -31,6 +31,9 @@ class DashboardViewModel @Inject constructor(
     val todayHeartRateData: StateFlow<List<Long>> = heartRateRepository.getTodayHeartRateData()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val todayHeartRateRecords = heartRateRepository.getTodayHeartRateRecords()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val todaySteps: StateFlow<Long> = stepsRepository.getTodayStepsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 

@@ -1,7 +1,6 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -23,10 +22,10 @@ import kotlin.math.sin
 fun HeartRateCard(
     bpm: Long,
     heartRateData: List<Long> = emptyList(),
-    onClick: () -> Unit // Adicione este parâmetro
+    onClick: () -> Unit
 ) {
     DashboardCard(
-        modifier = Modifier.clickable { onClick() } // Adicione este modifier
+        onClick = onClick // Use o onClick do DashboardCard ao invés do Modifier.clickable
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color.White)

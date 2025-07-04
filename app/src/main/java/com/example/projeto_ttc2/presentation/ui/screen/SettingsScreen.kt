@@ -34,7 +34,9 @@ fun SettingsScreen(navController: NavController) {
             navController.navigate("profile_screen")
         }
         SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") { /* TODO */ }
-        SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") {
+            navController.navigate("emergency_contacts_screen")
+        }
         SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
         SettingsItem(icon = Icons.Default.Sensors, text = "Sensores") { /* TODO */ }
         SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }

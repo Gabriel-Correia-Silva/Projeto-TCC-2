@@ -35,4 +35,6 @@ interface BatimentoCardiacoDao {
     // Nova função para buscar dados de hoje ordenados cronologicamente
     @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp >= :startOfDay ORDER BY timestamp ASC")
     fun getBatimentosDesdeInicioDoDia(startOfDay: Instant): Flow<List<BatimentoCardiaco>>
+
+
 }

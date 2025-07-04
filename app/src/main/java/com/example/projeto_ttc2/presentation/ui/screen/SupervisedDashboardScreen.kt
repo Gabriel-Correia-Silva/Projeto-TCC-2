@@ -1,3 +1,4 @@
+// Local: com/example/projeto_ttc2/presentation/ui/screen/SupervisedDashboardScreen.kt
 package com.example.projeto_ttc2.presentation.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
@@ -22,19 +23,24 @@ fun SupervisedDashboardScreen(
     heartRateData: List<Long> = emptyList(),
     onSosClick: () -> Unit,
     isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    onNavigateToSleep: () -> Unit
-
+    // PARÂMETROS MODIFICADOS AQUI
+    onManualRefresh: () -> Unit,
+    onBackgroundRefresh: () -> Unit,
+    onNavigateToSleep: () -> Unit,
+    onNavigateToHeartRate: () -> Unit // Adicione este parâmetro
 ) {
+    // LÓGICA MODIFICADA AQUI
     LaunchedEffect(Unit) {
         while (true) {
-            onRefresh()
+            onBackgroundRefresh() // Chama a atualização silenciosa
             delay(30000)
         }
     }
+
+    // LÓGICA MODIFICADA AQUI
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        onRefresh = onManualRefresh, // Chama a atualização com indicador
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -45,7 +51,8 @@ fun SupervisedDashboardScreen(
             item {
                 HeartRateCard(
                     bpm = dashboardData.heartRate,
-                    heartRateData = heartRateData
+                    heartRateData = heartRateData,
+                    onClick = onNavigateToHeartRate // Passe o lambda aqui
                 )
             }
             item {

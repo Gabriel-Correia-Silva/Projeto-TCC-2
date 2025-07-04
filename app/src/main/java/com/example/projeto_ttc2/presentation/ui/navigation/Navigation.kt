@@ -1,13 +1,16 @@
 package com.example.projeto_ttc2.presentation.navigation
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.PermissionController
@@ -25,6 +28,8 @@ import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
 import com.example.projeto_ttc2.presentation.ui.screen.*
 import com.example.projeto_ttc2.presentation.viewmodel.*
+import com.example.projeto_ttc2.presentation.ui.screen.EmergencyContactsScreen
+import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -34,6 +39,7 @@ fun AppNavigation(
     authViewModel: AuthViewModel,
     healthConnectViewModel: HealthConnectViewModel,
     dashboardViewModel: DashboardViewModel,
+    emergencyContactViewModel: EmergencyContactViewModel,
     googleSignInLauncher: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -42,12 +48,11 @@ fun AppNavigation(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Inicializa o HealthConnectViewModel uma vez
     LaunchedEffect(Unit) {
         healthConnectViewModel.initialLoad(context)
     }
 
-    val routesWithHeader = listOf("supervisor_dashboard", "supervised_dashboard", "settings_screen", "sleep_screen")
+    val routesWithHeader = listOf("supervisor_dashboard", "supervised_dashboard", "settings_screen", "sleep_screen", "emergency_contacts_screen", "heart_rate_detail_screen")
 
     fun getTitleForRoute(route: String?, userName: String): String {
         return when (route) {
@@ -55,6 +60,8 @@ fun AppNavigation(
             "supervised_dashboard" -> "Olá, $userName"
             "settings_screen" -> "Configurações"
             "sleep_screen" -> "Sono"
+            "emergency_contacts_screen" -> "Contatos de Emergência"
+            "heart_rate_detail_screen" -> "Frequência Cardíaca"
             else -> "App"
         }
     }
@@ -64,62 +71,50 @@ fun AppNavigation(
     val uiState by healthConnectViewModel.uiState
     val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
     val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
+    val todayHeartRateRecords by dashboardViewModel.todayHeartRateRecords.collectAsStateWithLifecycle()
     val todaySteps by dashboardViewModel.todaySteps.collectAsStateWithLifecycle()
     val todayDistanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
     val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
     val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
     val totalCalories by dashboardViewModel.todayTotalCalories.collectAsStateWithLifecycle()
 
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        scope.launch {
-            if (granted.containsAll(healthConnectViewModel.permissions)) {
-                healthConnectViewModel.onPermissionsResult(granted)
-                navController.navigate("login") {
-                    popUpTo("splash_screen") { inclusive = true }
-                }
-            } else {
-                healthConnectViewModel.onPermissionsResult(granted)
-            }
-        }
-    }
-
     LaunchedEffect(authState, userRole) {
-        when (val state = authState) {
+        Log.d("AppNavigation", "Auth state changed. Auth: $authState, Role: $userRole")
+        when (authState) {
             is AuthState.Authenticated -> {
                 val destination = when (userRole) {
                     is UserRole.Supervisor -> "supervisor_dashboard"
                     is UserRole.Supervised -> "supervised_dashboard"
                     else -> null
                 }
-                if (destination != null && destination != currentRoute) {
+                if (destination != null && currentRoute != destination) {
+                    Log.d("AppNavigation", "Navigating to dashboard: $destination")
                     navController.navigate(destination) {
-                        popUpTo("login") { inclusive = true }
-                        popUpTo("splash_screen") { inclusive = true }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 }
             }
             is AuthState.NeedsRegistration -> {
                 if (currentRoute != "registration") {
+                    Log.d("AppNavigation", "Navigating to registration")
                     navController.navigate("registration") {
                         popUpTo("login") { inclusive = true }
                         popUpTo("splash_screen") { inclusive = true }
                     }
                 }
             }
-            is AuthState.Error -> {
-                // Não faz nada aqui para evitar navegações inesperadas
-            }
             else -> {
-                if (currentRoute !in listOf("login", "registration", "splash_screen")) {
-                    navController.navigate("splash_screen") {
+                val protectedRoutes = routesWithHeader + listOf("profile_screen", "sleep_screen")
+                if (currentRoute in protectedRoutes) {
+                    Log.d("AppNavigation", "User not authenticated on a protected route. Navigating to login.")
+                    navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             }
         }
     }
+
 
     Scaffold(
         topBar = {
@@ -141,28 +136,59 @@ fun AppNavigation(
             startDestination = "splash_screen",
             modifier = Modifier.padding(innerPadding)
         ) {
+
             composable("splash_screen") {
-                LaunchedEffect(uiState) {
-                    if (healthConnectViewModel.hasAllPermissions()) {
-                        navController.navigate("login") {
-                            popUpTo("splash_screen") { inclusive = true }
+                var hasNavigated by remember { mutableStateOf(false) }
+
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(2000)
+                    if (!hasNavigated) {
+                        hasNavigated = true
+                        if (healthConnectViewModel.permissionsGranted(context)) {
+                            val currentUser = Firebase.auth.currentUser
+                            if (currentUser != null) {
+                                authViewModel.checkUserRegistration(currentUser.uid)
+                            } else {
+                                navController.navigate("login") { popUpTo("splash_screen") { inclusive = true } }
+                            }
+                        } else {
+                            navController.navigate("permission_screen") { popUpTo("splash_screen") { inclusive = true } }
                         }
                     }
                 }
-                SplashScreen(
-                    onContinueClick = {
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Text("Carregando...")
+                }
+            }
+
+            composable("permission_screen") {
+                val requestPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = PermissionController.createRequestPermissionResultContract(),
+                    onResult = { permissions ->
                         scope.launch {
-                            if (healthConnectViewModel.hasAllPermissions()) {
-                                navController.navigate("login") {
-                                    popUpTo("splash_screen") { inclusive = true }
+                            if (healthConnectViewModel.permissionsGranted(context, permissions)) {
+                                val currentUser = Firebase.auth.currentUser
+                                if (currentUser != null) {
+                                    authViewModel.checkUserRegistration(currentUser.uid)
+                                } else {
+                                    navController.navigate("login") { popUpTo("permission_screen") { inclusive = true } }
                                 }
-                            } else {
-                                requestPermissionLauncher.launch(healthConnectViewModel.permissions)
                             }
                         }
                     }
                 )
+
+                PermissionScreen(
+                    onGetPermissions = { scope.launch { healthConnectViewModel.requestPermissions(requestPermissionLauncher) } }
+                )
             }
+
 
             composable("login") {
                 LoginScreen(onSignInRequested = googleSignInLauncher)
@@ -172,13 +198,10 @@ fun AppNavigation(
                 val currentState = authState
                 if (currentState is AuthState.NeedsRegistration) {
                     RegistrationScreen(
-                        user = currentState.user,
-                        onRegister = { name, role, supervisorId ->
-                            authViewModel.registerUser(currentState.user, name, role, supervisorId)
+                        onRegistrationComplete = { role ->
+                            authViewModel.completeRegistration(currentState.userId, role)
                         }
                     )
-                } else {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
                 }
             }
 
@@ -189,15 +212,17 @@ fun AppNavigation(
                         heartRate = latestBpm,
                         steps = todaySteps,
                         distanceKm = todayDistanceKm,
-                        sleepSession = sleepSession,
                         activeCaloriesKcal = activeCalories,
-                        caloriesKcal = totalCalories
+                        caloriesKcal = totalCalories,
+                        sleepSession = sleepSession
                     ),
                     heartRateData = todayHeartRateData,
-                    onSosClick = { /* Lógica do botão SOS */ },
-                    isRefreshing = uiState is UiState.Loading,
-                    onRefresh = { healthConnectViewModel.syncData() },
-                    onNavigateToSleep = { navController.navigate("sleep_screen") }
+                    onSosClick = { /* TODO */ },
+                    isRefreshing = uiState == UiState.Loading,
+                    onManualRefresh = { scope.launch { healthConnectViewModel.syncData() } },
+                    onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(showIndicator = false) } },
+                    onNavigateToSleep = { navController.navigate("sleep_screen") },
+                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") }
                 )
             }
 
@@ -208,22 +233,23 @@ fun AppNavigation(
                         heartRate = latestBpm,
                         steps = todaySteps,
                         distanceKm = todayDistanceKm,
-                        sleepSession = sleepSession,
                         activeCaloriesKcal = activeCalories,
-                        caloriesKcal = totalCalories
+                        caloriesKcal = totalCalories,
+                        sleepSession = sleepSession
                     ),
                     heartRateData = todayHeartRateData,
-                    onSosClick = { /* Lógica do botão SOS */ },
-                    isRefreshing = uiState is UiState.Loading,
-                    onRefresh = { healthConnectViewModel.syncData() },
-                    onNavigateToSleep = { navController.navigate("sleep_screen") }
+                    onSosClick = { /* TODO */ },
+                    isRefreshing = uiState == UiState.Loading,
+                    onManualRefresh = { scope.launch { healthConnectViewModel.syncData() } },
+                    onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(showIndicator = false) } },
+                    onNavigateToSleep = { navController.navigate("sleep_screen") },
+                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") }
                 )
             }
             composable("profile_screen") {
                 ProfileScreen(
-                    userName = Firebase.auth.currentUser?.displayName ?: "Usuário",
-                    userEmail = Firebase.auth.currentUser?.email ?: "email@exemplo.com"
-                    // Adicione outros parâmetros se necessário
+                    user = Firebase.auth.currentUser,
+                    onLogout = { authViewModel.signOut() }
                 )
             }
 
@@ -231,16 +257,30 @@ fun AppNavigation(
                 SettingsScreen(navController = navController)
             }
 
+            composable("emergency_contacts_screen") {
+                EmergencyContactsScreen(viewModel = emergencyContactViewModel)
+            }
+
             composable("sleep_screen") {
                 SleepScreen(navController = navController, sleepData = sleepSession)
             }
 
+            composable("heart_rate_detail_screen") {
+                HeartRateDetailScreen(
+                    currentBpm = latestBpm,
+                    dailyHeartRateData = todayHeartRateRecords,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
             composable(
-                "error/{message}",
-                arguments = listOf(navArgument("message") { type = NavType.StringType })
+                "user_detail/{userId}",
+                arguments = listOf(navArgument("userId") { type = NavType.StringType })
             ) { backStackEntry ->
-                val message = backStackEntry.arguments?.getString("message") ?: "Ocorreu um erro."
-                Text("Erro: $message")
+                val userId = backStackEntry.arguments?.getString("userId")
+                if (userId != null) {
+                    UserDetailScreen(userId = userId)
+                }
             }
         }
     }

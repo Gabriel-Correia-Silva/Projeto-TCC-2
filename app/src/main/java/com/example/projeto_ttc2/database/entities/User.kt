@@ -1,14 +1,18 @@
 package com.example.projeto_ttc2.database.entities
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.time.LocalDate
 
+@Entity(tableName = "users")
 data class User(
-    val uid: String = "",
-    val email: String = "",
-    val name: String = "",
-    val role: String = "",
+    @PrimaryKey
+    val id: String, // ID do Firebase
+    val name: String? = null,
+    val email: String? = null,
+    val role: String? = null,
     val supervisorId: String? = null,
-    val birthDate: LocalDate? = null,
+    val profileImageUrl: String? = null,
     val gender: String? = null,
-    val profileImageUrl: String? = null
+    val birthDate: LocalDate? = null
 )

@@ -3,13 +3,8 @@ package com.example.projeto_ttc2.di
 import android.content.Context
 import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
-import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
-import com.example.projeto_ttc2.database.dao.CaloriasDao
-import com.example.projeto_ttc2.database.dao.PassosDao
-import com.example.projeto_ttc2.database.dao.SonoDao
-import com.example.projeto_ttc2.database.repository.HealthConnectManager
-import com.example.projeto_ttc2.database.repository.UserRepository
-import com.example.projeto_ttc2.database.repository.UserRepositoryImpl
+import com.example.projeto_ttc2.database.dao.*
+import com.example.projeto_ttc2.database.repository.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -54,6 +49,12 @@ object AppModule {
         return appDatabase.caloriasDao()
     }
 
+
+    @Provides
+    fun provideEmergencyContactDao(appDatabase: AppDatabase): EmergencyContactDao {
+        return appDatabase.emergencyContactDao()
+    }
+
     @Provides
     @Singleton
     fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager {
@@ -81,9 +82,17 @@ object AppModule {
     @Provides
     @Singleton
     fun provideUserRepository(
+        userDao: UserDao,
         firestore: FirebaseFirestore,
         storage: FirebaseStorage
     ): UserRepository {
-        return UserRepositoryImpl(firestore, storage)
+        return UserRepositoryImpl(userDao, firestore, storage)
     }
+
+    @Provides
+    fun provideUserDao(appDatabase: AppDatabase): UserDao {
+        return appDatabase.userDao()
+    }
+
+
 }

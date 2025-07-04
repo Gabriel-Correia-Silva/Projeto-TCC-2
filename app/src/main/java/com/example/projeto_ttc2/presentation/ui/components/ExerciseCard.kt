@@ -2,6 +2,7 @@ package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,7 +31,10 @@ fun ExerciseCard() {
                 Text("Duração", color = Color.White, fontSize = 14.sp)
             }
         }
-        Divider(color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 8.dp),
+            color = Color.White.copy(alpha = 0.5f)
+        )
         Text("Último exercício: Caminhada - 1h 10min - 298 kcal", color = Color.White, fontSize = 14.sp)
     }
 }

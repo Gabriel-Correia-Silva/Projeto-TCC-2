@@ -34,6 +34,11 @@ class HeartRateRepository @Inject constructor(
             }
     }
 
+    fun getTodayHeartRateRecords(): Flow<List<BatimentoCardiaco>> {
+        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        return batimentoCardiacoDao.getBatimentosDesdeInicioDoDia(startOfDay)
+    }
+
     suspend fun syncData() {
         val client = healthConnectManager.client
         val endTime = Instant.now()

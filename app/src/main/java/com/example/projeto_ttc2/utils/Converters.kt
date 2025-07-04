@@ -12,8 +12,18 @@ class Converters {
     }
 
     @TypeConverter
-    fun instantToTimestamp(instant: Instant?): Long? {
-        return instant?.toEpochMilli()
+    fun dateToTimestamp(date: Instant?): Long? {
+        return date?.toEpochMilli()
+    }
+
+    @TypeConverter
+    fun fromLocalDateString(value: String?): LocalDate? {
+        return value?.let { LocalDate.parse(it) }
+    }
+
+    @TypeConverter
+    fun localDateToString(date: LocalDate?): String? {
+        return date?.toString()
     }
 
     @TypeConverter
@@ -24,15 +34,5 @@ class Converters {
     @TypeConverter
     fun zoneOffsetToString(zoneOffset: ZoneOffset?): String? {
         return zoneOffset?.id
-    }
-
-    @TypeConverter
-    fun fromEpochDay(value: Long?): LocalDate? {
-        return value?.let { LocalDate.ofEpochDay(it) }
-    }
-
-    @TypeConverter
-    fun dateToEpochDay(date: LocalDate?): Long? {
-        return date?.toEpochDay()
     }
 }

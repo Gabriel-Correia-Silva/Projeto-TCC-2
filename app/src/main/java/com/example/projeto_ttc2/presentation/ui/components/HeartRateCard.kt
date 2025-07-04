@@ -1,6 +1,7 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -21,9 +22,12 @@ import kotlin.math.sin
 @Composable
 fun HeartRateCard(
     bpm: Long,
-    heartRateData: List<Long> = emptyList()
+    heartRateData: List<Long> = emptyList(),
+    onClick: () -> Unit // Adicione este parâmetro
 ) {
-    DashboardCard {
+    DashboardCard(
+        modifier = Modifier.clickable { onClick() } // Adicione este modifier
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color.White)
             Spacer(modifier = Modifier.width(8.dp))
@@ -223,7 +227,7 @@ private fun createSmoothPath(points: List<Offset>): Path {
         // Controle de suavização simples
         val controlPointX = previousPoint.x + (currentPoint.x - previousPoint.x) * 0.5f
 
-        path.quadraticBezierTo(
+        path.quadraticTo(
             controlPointX, previousPoint.y,
             currentPoint.x, currentPoint.y
         )

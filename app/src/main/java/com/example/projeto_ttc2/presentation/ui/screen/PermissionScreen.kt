@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun SplashScreen(
+fun PermissionScreen(
     onContinueClick: () -> Unit
 ) {
     Column(

@@ -1,3 +1,4 @@
+// Local: com/example/projeto_ttc2/presentation/viewmodel/HealthConnectViewModel.kt
 package com.example.projeto_ttc2.presentation.viewmodel
 
 import android.content.Context
@@ -48,7 +49,7 @@ class HealthConnectViewModel @Inject constructor(
         viewModelScope.launch {
             if (hasAllPermissions()) {
                 isRequestingPermission = false
-                syncData()
+                syncData(showIndicator = false) // Chama sem indicador na carga inicial
             } else {
                 uiState.value = UiState.PermissionRequired
             }
@@ -59,7 +60,7 @@ class HealthConnectViewModel @Inject constructor(
         viewModelScope.launch {
             isRequestingPermission = false
             if (granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)) {
-                syncData()
+                syncData(showIndicator = true) // Mostra indicador após conceder permissão
             } else {
                 uiState.value = UiState.Error("As permissões de saúde são necessárias para o funcionamento do app.")
             }
@@ -75,9 +76,11 @@ class HealthConnectViewModel @Inject constructor(
         }
     }
 
-    fun syncData(): Job {
+    fun syncData(showIndicator: Boolean = false): Job {
         return viewModelScope.launch {
-            uiState.value = UiState.Loading
+            if (showIndicator) {
+                uiState.value = UiState.Loading
+            }
             try {
                 syncRepository.syncAllData()
                 uiState.value = UiState.Success

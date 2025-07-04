@@ -9,7 +9,7 @@ import com.example.projeto_ttc2.database.dao.*
 import com.example.projeto_ttc2.database.entities.*
 import com.example.projeto_ttc2.utils.Converters
 
-@Database(entities = [BatimentoCardiaco::class, Passos::class, Sono::class, Calorias::class, EmergencyContact::class, User::class], version = 10, exportSchema = false)
+@Database(entities = [BatimentoCardiaco::class, Passos::class, Sono::class, Calorias::class, EmergencyContact::class, User::class], version = 11, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 

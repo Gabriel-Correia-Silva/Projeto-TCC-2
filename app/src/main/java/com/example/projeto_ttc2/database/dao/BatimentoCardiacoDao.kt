@@ -32,9 +32,6 @@ interface BatimentoCardiacoDao {
     @Query("DELETE FROM batimentos_cardiacos")
     suspend fun limparTodos()
 
-    // Nova função para buscar dados de hoje ordenados cronologicamente
     @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp >= :startOfDay ORDER BY timestamp ASC")
     fun getBatimentosDesdeInicioDoDia(startOfDay: Instant): Flow<List<BatimentoCardiaco>>
-
-
 }

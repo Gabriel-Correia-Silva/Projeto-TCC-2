@@ -4,9 +4,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,21 +16,43 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeartRateDetailScreen(
     currentBpm: Long,
-    dailyHeartRateData: List<BatimentoCardiaco>,
+    dashboardViewModel: DashboardViewModel,
     onBackClick: () -> Unit
 ) {
-    Scaffold() { paddingValues ->
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    val dailyHeartRateData by dashboardViewModel.heartRateForDate.collectAsStateWithLifecycle()
+
+    LaunchedEffect(selectedDate) {
+        dashboardViewModel.loadHeartRateForDate(selectedDate)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Frequência Cardíaca") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -36,6 +60,15 @@ fun HeartRateDetailScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            DateSelector(
+                selectedDate = selectedDate,
+                onDateChange = { newDate ->
+                    selectedDate = newDate
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text("Batimento Atual", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.Bottom) {
@@ -52,7 +85,7 @@ fun HeartRateDetailScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text("Histórico do Dia (Média por Hora)", style = MaterialTheme.typography.titleLarge)
+            Text("Média por Hora", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(16.dp))
 
             if (dailyHeartRateData.isNotEmpty()) {
@@ -69,9 +102,39 @@ fun HeartRateDetailScreen(
                         .height(250.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Sem dados de histórico para hoje.")
+                    Text("Sem dados de histórico para este dia.")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DateSelector(
+    selectedDate: LocalDate,
+    onDateChange: (LocalDate) -> Unit
+) {
+    val formatter = DateTimeFormatter.ofPattern("dd 'de' MMMM", Locale("pt", "BR"))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = { onDateChange(selectedDate.minusDays(1)) }) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = "Dia anterior")
+        }
+
+        Text(
+            text = if (selectedDate.isEqual(LocalDate.now())) "Hoje" else selectedDate.format(formatter),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        IconButton(
+            onClick = { onDateChange(selectedDate.plusDays(1)) },
+            enabled = selectedDate.isBefore(LocalDate.now())
+        ) {
+            Icon(Icons.Default.ChevronRight, contentDescription = "Próximo dia")
         }
     }
 }
@@ -87,7 +150,10 @@ fun HeartRateBarChart(
         entry.value.map { it.bpm }.average().toLong()
     }
 
-    if (dataByHour.isEmpty()) return
+    if (dataByHour.isEmpty()) {
+        // Handle empty data case if needed, e.g., show a message
+        return
+    }
 
     val maxBpm = (dataByHour.values.maxOrNull() ?: 120L).toFloat()
     val minBpm = (dataByHour.values.minOrNull() ?: 40L).toFloat()
@@ -95,7 +161,6 @@ fun HeartRateBarChart(
 
     val density = LocalDensity.current
 
-    // Obter as cores fora do contexto Canvas
     val primaryColor = colorScheme.primary
     val onSurfaceColor = colorScheme.onSurface
 
@@ -111,7 +176,7 @@ fun HeartRateBarChart(
         val chartWidth = size.width - yAxisSpace
         val chartHeight = size.height - xAxisSpace
 
-        // Desenha as linhas de grade e os rótulos do eixo Y
+        // Draw Y-axis labels and grid lines
         val numGridLines = 4
         for (i in 0..numGridLines) {
             val value = minBpm + (range / numGridLines) * i
@@ -130,7 +195,7 @@ fun HeartRateBarChart(
             )
         }
 
-        // Desenha as barras e os rótulos do eixo X
+        // Draw bars and X-axis labels
         val barWidthWithSpacing = chartWidth / 24
         val barWidth = barWidthWithSpacing * 0.7f
 
@@ -141,7 +206,7 @@ fun HeartRateBarChart(
             if (bpm != null) {
                 val barHeight = ((bpm - minBpm) / range * chartHeight).coerceAtLeast(0f)
                 drawRect(
-                    color = primaryColor, // Usando a cor obtida fora do Canvas
+                    color = primaryColor,
                     topLeft = Offset(x, chartHeight - barHeight),
                     size = Size(barWidth, barHeight)
                 )

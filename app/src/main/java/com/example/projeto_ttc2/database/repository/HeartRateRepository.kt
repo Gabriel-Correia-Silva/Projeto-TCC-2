@@ -9,6 +9,7 @@ import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -27,11 +28,16 @@ class HeartRateRepository @Inject constructor(
 
     fun getTodayHeartRateData(): Flow<List<Long>> {
         val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
-
         return batimentoCardiacoDao.getBatimentosDesdeInicioDoDia(startOfDay)
             .map { batimentos ->
                 batimentos.map { it.bpm }
             }
+    }
+
+    fun getHeartRateRecordsForDate(date: LocalDate): Flow<List<BatimentoCardiaco>> {
+        val startOfDay = date.atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        val endOfDay = date.plusDays(1).atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        return batimentoCardiacoDao.getBatimentosDoPeriodo(startOfDay, endOfDay)
     }
 
     fun getTodayHeartRateRecords(): Flow<List<BatimentoCardiaco>> {

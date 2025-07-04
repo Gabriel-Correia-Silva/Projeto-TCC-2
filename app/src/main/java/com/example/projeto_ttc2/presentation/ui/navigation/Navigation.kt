@@ -24,16 +24,7 @@ import com.example.projeto_ttc2.presentation.state.AuthState
 import com.example.projeto_ttc2.presentation.state.UiState
 import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
-import com.example.projeto_ttc2.presentation.ui.screen.EmergencyContactsScreen
-import com.example.projeto_ttc2.presentation.ui.screen.HeartRateDetailScreen
-import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
-import com.example.projeto_ttc2.presentation.ui.screen.NightMonitoringScreen
-import com.example.projeto_ttc2.presentation.ui.screen.PermissionScreen
-import com.example.projeto_ttc2.presentation.ui.screen.ProfileScreen
-import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
-import com.example.projeto_ttc2.presentation.ui.screen.SettingsScreen
-import com.example.projeto_ttc2.presentation.ui.screen.SleepScreen
-import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
+import com.example.projeto_ttc2.presentation.ui.screen.*
 import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
@@ -88,7 +79,6 @@ fun AppNavigation(
     val uiState by healthConnectViewModel.uiState
     val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
     val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
-    val todayHeartRateRecords by dashboardViewModel.todayHeartRateRecords.collectAsStateWithLifecycle()
     val todaySteps by dashboardViewModel.todaySteps.collectAsStateWithLifecycle()
     val todayDistanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
     val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
@@ -290,7 +280,6 @@ fun AppNavigation(
             }
 
             composable("settings_screen") {
-
                 SettingsScreen(navController = navController)
             }
 
@@ -305,10 +294,11 @@ fun AppNavigation(
             composable("heart_rate_detail_screen") {
                 HeartRateDetailScreen(
                     currentBpm = latestBpm,
-                    dailyHeartRateData = todayHeartRateRecords,
+                    dashboardViewModel = dashboardViewModel,
                     onBackClick = { navController.popBackStack() }
                 )
             }
+
             composable("night_monitoring_screen") {
                 NightMonitoringScreen(navController = navController)
             }

@@ -1,4 +1,4 @@
-package com.example.projeto_ttc2.presentation.navigation
+package com.example.projeto_ttc2.presentation.ui.navigation
 
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -65,9 +65,9 @@ fun AppNavigation(
         "settings_screen",
         "sleep_screen",
         "emergency_contacts_screen",
-        "heart_rate_detail_screen"
+        "heart_rate_detail_screen",
+        "profile_screen"
     )
-
     fun getTitleForRoute(route: String?, userName: String): String {
         return when (route) {
             "supervisor_dashboard", "supervised_dashboard" -> "Olá, $userName"
@@ -75,6 +75,7 @@ fun AppNavigation(
             "sleep_screen" -> "Sono"
             "emergency_contacts_screen" -> "Contatos de Emergência"
             "heart_rate_detail_screen" -> "Frequência Cardíaca"
+            "profile_screen" -> "Perfil"
             else -> "App"
         }
     }

@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import com.example.projeto_ttc2.presentation.navigation.AppNavigation
+import com.example.projeto_ttc2.presentation.ui.navigation.AppNavigation
 import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
 import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.google.android.gms.auth.api.signin.GoogleSignIn

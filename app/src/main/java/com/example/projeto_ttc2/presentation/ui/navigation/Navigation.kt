@@ -15,21 +15,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.state.AuthState
 import com.example.projeto_ttc2.presentation.state.UiState
 import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
-import com.example.projeto_ttc2.presentation.ui.screen.*
-import com.example.projeto_ttc2.presentation.viewmodel.*
 import com.example.projeto_ttc2.presentation.ui.screen.EmergencyContactsScreen
+import com.example.projeto_ttc2.presentation.ui.screen.HeartRateDetailScreen
+import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
+import com.example.projeto_ttc2.presentation.ui.screen.PermissionScreen
+import com.example.projeto_ttc2.presentation.ui.screen.ProfileScreen
+import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
+import com.example.projeto_ttc2.presentation.ui.screen.SettingsScreen
+import com.example.projeto_ttc2.presentation.ui.screen.SleepScreen
+import com.example.projeto_ttc2.presentation.ui.screen.SupervisedDashboardScreen
+import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.HealthConnectViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -52,12 +59,18 @@ fun AppNavigation(
         healthConnectViewModel.initialLoad(context)
     }
 
-    val routesWithHeader = listOf("supervisor_dashboard", "supervised_dashboard", "settings_screen", "sleep_screen", "emergency_contacts_screen", "heart_rate_detail_screen")
+    val routesWithHeader = listOf(
+        "supervisor_dashboard",
+        "supervised_dashboard",
+        "settings_screen",
+        "sleep_screen",
+        "emergency_contacts_screen",
+        "heart_rate_detail_screen"
+    )
 
     fun getTitleForRoute(route: String?, userName: String): String {
         return when (route) {
-            "supervisor_dashboard" -> "Olá, $userName"
-            "supervised_dashboard" -> "Olá, $userName"
+            "supervisor_dashboard", "supervised_dashboard" -> "Olá, $userName"
             "settings_screen" -> "Configurações"
             "sleep_screen" -> "Sono"
             "emergency_contacts_screen" -> "Contatos de Emergência"
@@ -77,6 +90,8 @@ fun AppNavigation(
     val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
     val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
     val totalCalories by dashboardViewModel.todayTotalCalories.collectAsStateWithLifecycle()
+
+    val userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário"
 
     LaunchedEffect(authState, userRole) {
         Log.d("AppNavigation", "Auth state changed. Auth: $authState, Role: $userRole")
@@ -113,23 +128,22 @@ fun AppNavigation(
                 }
             }
             is AuthState.Loading -> {
-                // Não faz navegação durante loading para evitar loops
                 Log.d("AppNavigation", "Auth state is loading, waiting...")
             }
         }
     }
 
-
     Scaffold(
         topBar = {
             if (currentRoute in routesWithHeader) {
+                val isDashboard = currentRoute in listOf("supervisor_dashboard", "supervised_dashboard")
                 MainAppHeader(
-                    title = getTitleForRoute(
-                        currentRoute,
-                        Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário"
-                    ),
+                    title = getTitleForRoute(currentRoute, userName),
+                    showBackArrow = !isDashboard,
+                    onBackClick = { navController.popBackStack() },
+                    showIcons = isDashboard,
                     onSettingsClick = { navController.navigate("settings_screen") },
-                    onNotificationsClick = { /* TODO: Navegar para notificações */ },
+                    onNotificationsClick = { /* ... */ },
                     onLogout = { authViewModel.signOut() }
                 )
             }
@@ -148,14 +162,13 @@ fun AppNavigation(
                     kotlinx.coroutines.delay(2000)
                     if (!hasNavigated) {
                         hasNavigated = true
-                        // Prioriza verificação de autenticação sobre permissões
                         val currentUser = Firebase.auth.currentUser
                         if (currentUser != null) {
-                            // Usuário já está logado, verifica registro
                             authViewModel.checkUserRegistration(currentUser.uid)
                         } else {
-                            // Usuário não está logado, vai para login
-                            navController.navigate("login") { popUpTo("splash_screen") { inclusive = true } }
+                            navController.navigate("login") {
+                                popUpTo("splash_screen") { inclusive = true }
+                            }
                         }
                     }
                 }
@@ -176,7 +189,6 @@ fun AppNavigation(
                     onResult = { permissions ->
                         scope.launch {
                             healthConnectViewModel.onPermissionsResult(permissions)
-                            // Após conceder permissões, navega para o dashboard apropriado
                             when (userRole) {
                                 is UserRole.Supervisor -> navController.navigate("supervisor_dashboard") {
                                     popUpTo("permission_screen") { inclusive = true }
@@ -185,7 +197,6 @@ fun AppNavigation(
                                     popUpTo("permission_screen") { inclusive = true }
                                 }
                                 else -> {
-                                    // Se não tem role definido, volta para login
                                     navController.navigate("login") {
                                         popUpTo("permission_screen") { inclusive = true }
                                     }
@@ -214,7 +225,6 @@ fun AppNavigation(
                     RegistrationScreen(
                         user = currentState.user,
                         onRegister = { name, role, supervisorId ->
-                            // Primeiro registra o usuário com os dados fornecidos
                             authViewModel.registerUser(currentState.user, name, role, supervisorId)
                         }
                     )
@@ -223,7 +233,7 @@ fun AppNavigation(
 
             composable("supervisor_dashboard") {
                 SupervisedDashboardScreen(
-                    userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
+                    userName = userName,
                     dashboardData = DashboardData(
                         heartRate = latestBpm,
                         steps = todaySteps,
@@ -244,7 +254,7 @@ fun AppNavigation(
 
             composable("supervised_dashboard") {
                 SupervisedDashboardScreen(
-                    userName = Firebase.auth.currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
+                    userName = userName,
                     dashboardData = DashboardData(
                         heartRate = latestBpm,
                         steps = todaySteps,
@@ -262,6 +272,7 @@ fun AppNavigation(
                     onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") }
                 )
             }
+
             composable("profile_screen") {
                 val currentUser = Firebase.auth.currentUser
                 ProfileScreen(

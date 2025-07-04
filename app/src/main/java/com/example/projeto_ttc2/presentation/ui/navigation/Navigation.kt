@@ -27,6 +27,7 @@ import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
 import com.example.projeto_ttc2.presentation.ui.screen.EmergencyContactsScreen
 import com.example.projeto_ttc2.presentation.ui.screen.HeartRateDetailScreen
 import com.example.projeto_ttc2.presentation.ui.screen.LoginScreen
+import com.example.projeto_ttc2.presentation.ui.screen.NightMonitoringScreen
 import com.example.projeto_ttc2.presentation.ui.screen.PermissionScreen
 import com.example.projeto_ttc2.presentation.ui.screen.ProfileScreen
 import com.example.projeto_ttc2.presentation.ui.screen.RegistrationScreen
@@ -66,7 +67,8 @@ fun AppNavigation(
         "sleep_screen",
         "emergency_contacts_screen",
         "heart_rate_detail_screen",
-        "profile_screen"
+        "profile_screen",
+        "night_monitoring_screen"
     )
     fun getTitleForRoute(route: String?, userName: String): String {
         return when (route) {
@@ -76,6 +78,7 @@ fun AppNavigation(
             "emergency_contacts_screen" -> "Contatos de Emergência"
             "heart_rate_detail_screen" -> "Frequência Cardíaca"
             "profile_screen" -> "Perfil"
+            "night_monitoring_screen" -> "Monitoramento Noturno"
             else -> "App"
         }
     }
@@ -287,6 +290,7 @@ fun AppNavigation(
             }
 
             composable("settings_screen") {
+
                 SettingsScreen(navController = navController)
             }
 
@@ -304,6 +308,9 @@ fun AppNavigation(
                     dailyHeartRateData = todayHeartRateRecords,
                     onBackClick = { navController.popBackStack() }
                 )
+            }
+            composable("night_monitoring_screen") {
+                NightMonitoringScreen(navController = navController)
             }
         }
     }

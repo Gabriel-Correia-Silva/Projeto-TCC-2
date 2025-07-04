@@ -33,7 +33,9 @@ fun SettingsScreen(navController: NavController) {
         SettingsItem(icon = Icons.Default.Person, text = "Perfil") {
             navController.navigate("profile_screen")
         }
-        SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") {
+            navController.navigate("night_monitoring_screen")
+        }
         SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") {
             navController.navigate("emergency_contacts_screen")
         }

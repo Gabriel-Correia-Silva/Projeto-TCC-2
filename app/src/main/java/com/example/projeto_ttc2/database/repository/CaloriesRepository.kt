@@ -7,6 +7,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.CaloriasDao
 import com.example.projeto_ttc2.database.entities.Calorias
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -17,7 +18,10 @@ import javax.inject.Singleton
 @Singleton
 class CaloriesRepository @Inject constructor(
     private val caloriasDao: CaloriasDao,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
+    // CORREÇÃO: Adicionando as dependências ao construtor
+    private val firebaseAuth: FirebaseAuth,
+    private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "CaloriesRepository"
 
@@ -36,20 +40,34 @@ class CaloriesRepository @Inject constructor(
         val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
         val now = Instant.now()
         val timeRangeFilter = TimeRangeFilter.between(startOfDay, now)
+        val userId = firebaseAuth.currentUser?.uid ?: ""
 
         try {
+            val allEntities = mutableListOf<Calorias>()
+
             val activeRequest = ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, timeRangeFilter)
             val activeResponse = client.readRecords(activeRequest)
             val activeEntities = activeResponse.records.map { record ->
-                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "ATIVA")
+                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "ATIVA", userId = userId)
             }
-            if (activeEntities.isNotEmpty()) caloriasDao.insertAll(activeEntities)
+            if (activeEntities.isNotEmpty()) {
+                caloriasDao.insertAll(activeEntities)
+                allEntities.addAll(activeEntities)
+            }
+
             val totalRequest = ReadRecordsRequest(TotalCaloriesBurnedRecord::class, timeRangeFilter)
             val totalResponse = client.readRecords(totalRequest)
             val totalEntities = totalResponse.records.map { record ->
-                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "TOTAL")
+                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "TOTAL", userId = userId)
             }
-            if (totalEntities.isNotEmpty()) caloriasDao.insertAll(totalEntities)
+            if (totalEntities.isNotEmpty()) {
+                caloriasDao.insertAll(totalEntities)
+                allEntities.addAll(totalEntities)
+            }
+
+            if (userId.isNotEmpty() && allEntities.isNotEmpty()) {
+                firebaseHealthDataRepository.syncCaloriesData(userId, allEntities)
+            }
 
             Log.d(TAG, "Sincronização de calorias concluída.")
         } catch (e: Exception) {

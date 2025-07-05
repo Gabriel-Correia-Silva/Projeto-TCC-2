@@ -11,5 +11,6 @@ data class Calorias(
     val startTime: Instant,
     val endTime: Instant,
     val kilocalorias: Double,
-    val tipo: String
+    val tipo: String,
+    val userId: String
 )

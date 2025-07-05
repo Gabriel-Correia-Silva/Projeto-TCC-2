@@ -29,63 +29,52 @@ object AppModule {
         ).fallbackToDestructiveMigration().build()
     }
 
+    // DAOs
     @Provides
-    fun provideBatimentoCardiacoDao(appDatabase: AppDatabase): BatimentoCardiacoDao {
-        return appDatabase.batimentoCardiacoDao()
-    }
+    fun provideBatimentoCardiacoDao(appDatabase: AppDatabase): BatimentoCardiacoDao = appDatabase.batimentoCardiacoDao()
 
     @Provides
-    fun providePassosDao(appDatabase: AppDatabase): PassosDao {
-        return appDatabase.passosDao()
-    }
+    fun providePassosDao(appDatabase: AppDatabase): PassosDao = appDatabase.passosDao()
 
     @Provides
-    fun provideSonoDao(appDatabase: AppDatabase): SonoDao {
-        return appDatabase.sonoDao()
-    }
+    fun provideSonoDao(appDatabase: AppDatabase): SonoDao = appDatabase.sonoDao()
 
     @Provides
-    fun provideCaloriasDao(appDatabase: AppDatabase): CaloriasDao {
-        return appDatabase.caloriasDao()
-    }
-
+    fun provideCaloriasDao(appDatabase: AppDatabase): CaloriasDao = appDatabase.caloriasDao()
 
     @Provides
-    fun provideEmergencyContactDao(appDatabase: AppDatabase): EmergencyContactDao {
-        return appDatabase.emergencyContactDao()
-    }
+    fun provideEmergencyContactDao(appDatabase: AppDatabase): EmergencyContactDao = appDatabase.emergencyContactDao()
+
+    @Provides
+    fun provideUserDao(appDatabase: AppDatabase): UserDao = appDatabase.userDao()
+
+    // Firebase
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
     @Provides
     @Singleton
-    fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager {
-        return HealthConnectManager(context)
-    }
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 
     @Provides
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth {
-        return FirebaseAuth.getInstance()
-    }
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    // Health Connect
+    @Provides
+    @Singleton
+    fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager = HealthConnectManager(context)
+
+    // Repositories
+    @Provides
+    @Singleton
+    fun provideAuthRepository(auth: FirebaseAuth, firestore: FirebaseFirestore): AuthRepository = AuthRepository(auth, firestore)
 
     @Provides
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore {
-        return FirebaseFirestore.getInstance()
-    }
-
-    @Provides
-    @Singleton
-    fun provideFirebaseStorage(): FirebaseStorage {
-        return FirebaseStorage.getInstance()
-    }
-
-    @Provides
-    @Singleton
-    fun provideAuthRepository(
-        auth: FirebaseAuth,
-        firestore: FirebaseFirestore
-    ): AuthRepository {
-        return AuthRepository(auth, firestore)
+    fun provideFirebaseHealthDataRepository(firestore: FirebaseFirestore): FirebaseHealthDataRepository {
+        return FirebaseHealthDataRepositoryImpl(firestore)
     }
 
     @Provides
@@ -94,44 +83,50 @@ object AppModule {
         emergencyContactDao: EmergencyContactDao,
         firestore: FirebaseFirestore,
         auth: FirebaseAuth
-    ): EmergencyContactRepository {
-        return EmergencyContactRepository(emergencyContactDao, firestore, auth)
-    }
+    ): EmergencyContactRepository = EmergencyContactRepository(emergencyContactDao, firestore, auth)
 
     @Provides
     @Singleton
     fun provideHeartRateRepository(
         batimentoCardiacoDao: BatimentoCardiacoDao,
-        healthConnectManager: HealthConnectManager
+        healthConnectManager: HealthConnectManager,
+        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
+        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
     ): HeartRateRepository {
-        return HeartRateRepository(batimentoCardiacoDao, healthConnectManager)
+        return HeartRateRepository(batimentoCardiacoDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides
     @Singleton
     fun provideStepsRepository(
         passosDao: PassosDao,
-        healthConnectManager: HealthConnectManager
+        healthConnectManager: HealthConnectManager,
+        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
+        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
     ): StepsRepository {
-        return StepsRepository(passosDao, healthConnectManager)
+        return StepsRepository(passosDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides
     @Singleton
     fun provideSleepRepository(
         sonoDao: SonoDao,
-        healthConnectManager: HealthConnectManager
+        healthConnectManager: HealthConnectManager,
+        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
+        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
     ): SleepRepository {
-        return SleepRepository(sonoDao, healthConnectManager)
+        return SleepRepository(sonoDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides
     @Singleton
     fun provideCaloriesRepository(
         caloriasDao: CaloriasDao,
-        healthConnectManager: HealthConnectManager
+        healthConnectManager: HealthConnectManager,
+        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
+        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
     ): CaloriesRepository {
-        return CaloriesRepository(caloriasDao, healthConnectManager)
+        return CaloriesRepository(caloriasDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides
@@ -154,11 +149,4 @@ object AppModule {
     ): UserRepository {
         return UserRepositoryImpl(userDao, firestore, storage)
     }
-
-    @Provides
-    fun provideUserDao(appDatabase: AppDatabase): UserDao {
-        return appDatabase.userDao()
-    }
-
-
 }

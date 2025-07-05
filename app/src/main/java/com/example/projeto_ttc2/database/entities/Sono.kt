@@ -14,5 +14,6 @@ data class Sono(
     val remSleepDurationMinutes: Long? = null,
     val deepSleepDurationMinutes: Long? = null,
     val lightSleepDurationMinutes: Long? = null,
-    val awakeDurationMinutes: Long? = null
+    val awakeDurationMinutes: Long? = null,
+    val userId: String // Add this line
 )

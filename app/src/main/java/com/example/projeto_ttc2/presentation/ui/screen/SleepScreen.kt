@@ -328,7 +328,8 @@ fun SleepScreenPreview() {
         deepSleepDurationMinutes = 120,
         lightSleepDurationMinutes = 240,
         remSleepDurationMinutes = 70,
-        awakeDurationMinutes = 0
+        awakeDurationMinutes = 0,
+        userId = "preview_user" 
     )
     SleepScreen(navController = rememberNavController(), sleepData = previewSleepData)
 }

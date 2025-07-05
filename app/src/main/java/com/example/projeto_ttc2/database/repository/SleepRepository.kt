@@ -6,6 +6,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.SonoDao
 import com.example.projeto_ttc2.database.entities.Sono
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -15,7 +16,10 @@ import javax.inject.Singleton
 @Singleton
 class SleepRepository @Inject constructor(
     private val sonoDao: SonoDao,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
+    // CORREÇÃO: Adicionando as dependências ao construtor
+    private val firebaseAuth: FirebaseAuth,
+    private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "SleepRepository"
 
@@ -34,6 +38,8 @@ class SleepRepository @Inject constructor(
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
             )
             val response = client.readRecords(request)
+            val userId = firebaseAuth.currentUser?.uid ?: ""
+
             val sonoEntities = response.records.map { record ->
                 Sono(
                     healthConnectId = record.metadata.id,
@@ -43,12 +49,17 @@ class SleepRepository @Inject constructor(
                     awakeDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
                     remSleepDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_REM }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
                     deepSleepDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_DEEP }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
-                    lightSleepDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_LIGHT }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() }
+                    lightSleepDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_LIGHT }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
+                    userId = userId
                 )
             }
             if (sonoEntities.isNotEmpty()) {
                 sonoDao.insertAll(sonoEntities)
                 Log.d(TAG, "${sonoEntities.size} sessões de sono inseridas/atualizadas.")
+
+                if (userId.isNotEmpty()) {
+                    firebaseHealthDataRepository.syncSleepData(userId, sonoEntities)
+                }
             } else {
                 Log.d(TAG, "Nenhuma nova sessão de sono encontrada.")
             }

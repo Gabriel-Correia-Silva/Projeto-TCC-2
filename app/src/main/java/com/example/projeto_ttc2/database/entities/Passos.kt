@@ -8,5 +8,6 @@ import java.time.LocalDate
 data class Passos(
     @PrimaryKey
     val data: LocalDate,
-    val contagem: Long
+    val contagem: Long,
+    val userId: String // Add this line
 )

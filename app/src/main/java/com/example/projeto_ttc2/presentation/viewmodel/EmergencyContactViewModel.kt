@@ -21,8 +21,21 @@ class EmergencyContactViewModel @Inject constructor(
 
     val contacts = repository.allContacts
 
+    // ADICIONE ESTAS LINHAS PARA GUARDAR O CONTATO PRINCIPAL
+    private val _primaryContact = MutableStateFlow<EmergencyContact?>(null)
+    val primaryContact: StateFlow<EmergencyContact?> = _primaryContact.asStateFlow()
+
     init {
         syncContacts()
+        // AQUI VOCÊ PODERIA CARREGAR O CONTATO SALVO DE SharedPreferences, POR EXEMPLO
+        // Por simplicidade, vamos começar com nulo.
+    }
+
+    // ADICIONE ESTA FUNÇÃO PARA DEFINIR O CONTATO PRINCIPAL
+    fun setPrimaryContact(contact: EmergencyContact) {
+        _primaryContact.value = contact
+        // AQUI VOCÊ PODERIA SALVAR O ID DO CONTATO EM SharedPreferences
+        // PARA QUE A ESCOLHA FIQUE SALVA QUANDO O APP FECHAR
     }
 
     fun addContact(name: String, phone: String, relationship: String) {
@@ -63,6 +76,11 @@ class EmergencyContactViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+
+                // Se o contato deletado era o principal, limpa a seleção
+                if (_primaryContact.value?.firestoreId == contact.firestoreId) {
+                    _primaryContact.value = null
+                }
 
                 repository.delete(contact)
 

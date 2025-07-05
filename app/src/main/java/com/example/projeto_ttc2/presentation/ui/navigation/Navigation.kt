@@ -1,18 +1,19 @@
 package com.example.projeto_ttc2.presentation.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -128,7 +129,7 @@ fun AppNavigation(
             }
         }
     }
-
+    val primaryContact by emergencyContactViewModel.primaryContact.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             if (currentRoute in routesWithHeader) {
@@ -142,6 +143,42 @@ fun AppNavigation(
                     onNotificationsClick = { /* ... */ },
                     onLogout = { authViewModel.signOut() }
                 )
+            }
+        },
+        floatingActionButton = {
+            val routesWithoutFab = listOf(
+                "splash_screen",
+                "login",
+                "registration",
+                "permission_screen"
+            )
+            if (currentRoute !in routesWithoutFab) {
+                FloatingActionButton(
+                    // AÇÃO DE CLIQUE MODIFICADA
+                    onClick = {
+                        val contactToCall = primaryContact
+                        if (contactToCall != null) {
+                            // Se existe um contato principal, abre o discador com o número
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:${contactToCall.phone}")
+                            }
+                            context.startActivity(intent)
+                        } else {
+                            // Se nenhum contato for principal, navega para a tela de seleção
+                            navController.navigate("emergency_contacts_screen")
+                        }
+                    },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = "Ligação de emergência",
+                        tint = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -305,7 +342,7 @@ fun AppNavigation(
 
             composable("steps_detail_screen") {
                 StepsDetailScreen(
-                    navController = navController, // Passando o NavController
+                    navController = navController,
                     dashboardViewModel = dashboardViewModel,
                 )
             }

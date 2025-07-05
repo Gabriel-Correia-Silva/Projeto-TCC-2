@@ -20,5 +20,7 @@ data class BatimentoCardiaco(
     val bpm: Long,
 
     @ColumnInfo(name = "zone_offset")
-    val zoneOffset: ZoneOffset?
+    val zoneOffset: ZoneOffset?,
+
+    val userId: String // Add this line
 )

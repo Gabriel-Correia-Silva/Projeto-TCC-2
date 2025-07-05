@@ -44,11 +44,6 @@ fun StepsDetailScreen(
     }
 
     Scaffold(
-        floatingActionButton = {
-            EmergencyCallFAB(onClick = {
-                navController.navigate("emergency_contacts_screen")
-            })
-        },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(

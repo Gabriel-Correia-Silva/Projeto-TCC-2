@@ -6,6 +6,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.PassosDao
 import com.example.projeto_ttc2.database.entities.Passos
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -18,7 +19,10 @@ import javax.inject.Singleton
 @Singleton
 class StepsRepository @Inject constructor(
     private val passosDao: PassosDao,
-    private val healthConnectManager: HealthConnectManager
+    private val healthConnectManager: HealthConnectManager,
+    // CORREÇÃO: Adicionando as dependências ao construtor
+    private val firebaseAuth: FirebaseAuth,
+    private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "StepsRepository"
 
@@ -31,7 +35,6 @@ class StepsRepository @Inject constructor(
         return passosDao.getPassosPorData(date)
     }
 
-    // Nova função para buscar dados de um período
     fun getStepsForPeriod(startDate: LocalDate, endDate: LocalDate): Flow<List<Passos>> {
         return passosDao.getStepsInPeriod(startDate, endDate)
     }
@@ -45,7 +48,6 @@ class StepsRepository @Inject constructor(
         return try {
             val request = ReadRecordsRequest(StepsRecord::class, timeRangeFilter)
             val response = client.readRecords(request)
-
             response.records
                 .groupBy { record ->
                     record.startTime.atZone(ZoneId.systemDefault()).hour
@@ -70,20 +72,26 @@ class StepsRepository @Inject constructor(
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
             )
             val response = client.readRecords(request)
+            val userId = firebaseAuth.currentUser?.uid ?: ""
 
             val stepsByDay = response.records.groupBy { record ->
-                val startDate = record.startTime.atZone(record.startZoneOffset ?: ZonedDateTime.now().offset).toLocalDate()
-                startDate
+                record.startTime.atZone(record.startZoneOffset ?: ZonedDateTime.now().offset).toLocalDate()
             }.mapValues { entry ->
                 entry.value.sumOf { it.count }
             }
 
-            stepsByDay.forEach { (date, totalSteps) ->
-                val passos = Passos(data = date, contagem = totalSteps)
-                passosDao.upsert(passos)
+            val passosEntities = stepsByDay.map { (date, totalSteps) ->
+                Passos(data = date, contagem = totalSteps, userId = userId)
             }
 
-            Log.d(TAG, "Sincronização de passos concluída. ${stepsByDay.size} dias processados.")
+            if (passosEntities.isNotEmpty()) {
+                passosEntities.forEach { passosDao.upsert(it) }
+                Log.d(TAG, "Sincronização de passos concluída. ${stepsByDay.size} dias processados.")
+
+                if (userId.isNotEmpty()) {
+                    firebaseHealthDataRepository.syncStepsData(userId, passosEntities)
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Falha ao sincronizar dados de passos", e)
         }

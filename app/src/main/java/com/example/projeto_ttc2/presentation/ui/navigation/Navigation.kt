@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Chat // Ícone para o chat/profissional
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,11 +62,13 @@ fun AppNavigation(
         "heart_rate_detail_screen",
         "steps_detail_screen",
         "profile_screen",
-        "night_monitoring_screen"
+        "night_monitoring_screen",
+        "professional_screen" // Adicionada nova rota
     )
     fun getTitleForRoute(route: String?, userName: String): String {
         return when (route) {
-            "supervisor_dashboard", "supervised_dashboard" -> "Olá, $userName"
+            "supervisor_dashboard" -> "Olá, $userName" // Título para supervisor
+            "supervised_dashboard" -> "Olá, $userName" // Título para supervisionado
             "settings_screen" -> "Configurações"
             "sleep_screen" -> "Sono"
             "emergency_contacts_screen" -> "Contatos de Emergência"
@@ -73,6 +76,7 @@ fun AppNavigation(
             "steps_detail_screen" -> "Passos"
             "profile_screen" -> "Perfil"
             "night_monitoring_screen" -> "Monitoramento Noturno"
+            "professional_screen" -> "Profissional" // Título para a nova tela
             else -> "App"
         }
     }
@@ -140,7 +144,8 @@ fun AppNavigation(
                     onBackClick = { navController.popBackStack() },
                     showIcons = isDashboard,
                     onSettingsClick = { navController.navigate("settings_screen") },
-                    onNotificationsClick = { /* ... */ },
+                    // Alterado para navegar para a tela profissional
+                    onNotificationsClick = { navController.navigate("professional_screen") },
                     onLogout = { authViewModel.signOut() }
                 )
             }
@@ -154,17 +159,14 @@ fun AppNavigation(
             )
             if (currentRoute !in routesWithoutFab) {
                 FloatingActionButton(
-                    // AÇÃO DE CLIQUE MODIFICADA
                     onClick = {
                         val contactToCall = primaryContact
                         if (contactToCall != null) {
-                            // Se existe um contato principal, abre o discador com o número
                             val intent = Intent(Intent.ACTION_DIAL).apply {
                                 data = Uri.parse("tel:${contactToCall.phone}")
                             }
                             context.startActivity(intent)
                         } else {
-                            // Se nenhum contato for principal, navega para a tela de seleção
                             navController.navigate("emergency_contacts_screen")
                         }
                     },
@@ -264,7 +266,13 @@ fun AppNavigation(
                 }
             }
 
+            // ROTA DO SUPERVISOR ATUALIZADA
             composable("supervisor_dashboard") {
+                SupervisorDashboardScreen() // Chama a nova tela do supervisor
+            }
+
+            // ROTA DO SUPERVISIONADO (Paciente)
+            composable("supervised_dashboard") {
                 SupervisedDashboardScreen(
                     userName = userName,
                     dashboardData = DashboardData(
@@ -286,26 +294,9 @@ fun AppNavigation(
                 )
             }
 
-            composable("supervised_dashboard") {
-                SupervisedDashboardScreen(
-                    userName = userName,
-                    dashboardData = DashboardData(
-                        heartRate = latestBpm,
-                        steps = todaySteps,
-                        distanceKm = todayDistanceKm,
-                        activeCaloriesKcal = activeCalories,
-                        caloriesKcal = totalCalories,
-                        sleepSession = sleepSession
-                    ),
-                    heartRateData = todayHeartRateData,
-                    onSosClick = { navController.navigate("emergency_contacts_screen") },
-                    isRefreshing = uiState == UiState.Loading,
-                    onManualRefresh = { scope.launch { healthConnectViewModel.syncData() } },
-                    onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(showIndicator = false) } },
-                    onNavigateToSleep = { navController.navigate("sleep_screen") },
-                    onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") },
-                    onNavigateToSteps = { navController.navigate("steps_detail_screen") }
-                )
+            // NOVA ROTA PARA A TELA PROFISSIONAL
+            composable("professional_screen") {
+                ProfessionalScreen()
             }
 
             composable("profile_screen") {
@@ -331,6 +322,8 @@ fun AppNavigation(
             composable("sleep_screen") {
                 SleepScreen(navController = navController, sleepData = sleepSession)
             }
+
+
 
             composable("heart_rate_detail_screen") {
                 HeartRateDetailScreen(

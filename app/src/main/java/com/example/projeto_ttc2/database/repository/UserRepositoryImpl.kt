@@ -1,10 +1,14 @@
 package com.example.projeto_ttc2.database.repository
 
 import android.net.Uri
+import android.util.Log
 import com.example.projeto_ttc2.database.dao.UserDao
 import com.example.projeto_ttc2.database.entities.User
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
@@ -64,5 +68,27 @@ class UserRepositoryImpl @Inject constructor(
         val storageRef = storage.reference.child("profile_images/$userId/${imageUri.lastPathSegment}")
         val uploadTask = storageRef.putFile(imageUri).await()
         return uploadTask.storage.downloadUrl.await().toString()
+    }
+
+    override fun getSupervisedUsers(supervisorId: String): Flow<List<User>> = callbackFlow {
+        val listener = usersCollection.whereEqualTo("supervisorId", supervisorId)
+            .addSnapshotListener { snapshot, error ->
+                // Se houver um erro de permissão ou de rede, o app não vai quebrar, mas o erro será logado.
+                if (error != null) {
+                    Log.w("Firestore", "Listen failed.", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                // Se a busca for bem-sucedida, envia a lista de usuários para quem estiver "ouvindo" (o ViewModel)
+                if (snapshot != null) {
+                    val users = snapshot.toObjects(User::class.java)
+                    Log.d("Firestore", "Supervisionados carregados: ${users.size} usuários encontrados.")
+
+                    trySend(users)
+                }
+            }
+        // Isso garante que a "escuta" ao Firestore seja cancelada quando a tela for fechada, evitando memory leaks.
+        awaitClose { listener.remove() }
     }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class Period {
@@ -28,7 +29,6 @@ class DashboardViewModel @Inject constructor(
     caloriesRepository: CaloriesRepository
 ) : ViewModel() {
 
-    // ... (Estados de Heart Rate e outros)
     val latestHeartRate: StateFlow<Long> = heartRateRepository.getLatestHeartRate()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
@@ -44,7 +44,6 @@ class DashboardViewModel @Inject constructor(
     private val _hourlyStepsForDate = MutableStateFlow<Map<Int, Long>>(emptyMap())
     val hourlyStepsForDate: StateFlow<Map<Int, Long>> = _hourlyStepsForDate.asStateFlow()
 
-    // Novos estados para a tela de Passos
     private val _selectedPeriod = MutableStateFlow(Period.SEMANA)
     val selectedPeriod: StateFlow<Period> = _selectedPeriod.asStateFlow()
 
@@ -69,19 +68,17 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             if (_selectedPeriod.value == Period.DIA) {
-                // Lógica para o dia (total e por hora)
                 stepsRepository.getStepsForDate(now).collect {
                     _totalStepsForPeriod.value = it?.contagem ?: 0L
                 }
                 _hourlyStepsForDate.value = stepsRepository.getHourlyStepsForDate(now)
-                _stepsForPeriod.value = emptyList() // Limpa os dados de período
+                _stepsForPeriod.value = emptyList()
             } else {
-                // Lógica para semana e mês
                 stepsRepository.getStepsForPeriod(startDate, endDate).collect { stepsList ->
                     _stepsForPeriod.value = stepsList
                     _totalStepsForPeriod.value = stepsList.sumOf { it.contagem }
                 }
-                _hourlyStepsForDate.value = emptyMap() // Limpa os dados por hora
+                _hourlyStepsForDate.value = emptyMap()
             }
         }
     }
@@ -119,6 +116,6 @@ class DashboardViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     val todayDistanceKm: StateFlow<Double> = todaySteps.map { steps ->
-        (steps * 0.762) / 1000 // Métrica de conversão de exemplo
+        (steps * 0.762) / 1000
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 }

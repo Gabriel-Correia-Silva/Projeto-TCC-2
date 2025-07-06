@@ -20,14 +20,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.projeto_ttc2.presentation.state.UserRole
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,13 +40,28 @@ fun ProfileScreen(
     userName: String = "",
     userEmail: String = "",
     fullName: String = "",
-    birthDate: LocalDate? = null,
+    birthDateString: String?, // Recebe a data como String
     gender: String = "",
     profileImageUrl: String? = null,
-    onSaveProfile: (String, String, LocalDate?, String, Uri?) -> Unit = { _, _, _, _, _ -> }
+    userId: String,
+    userRole: UserRole?,
+    onSaveProfile: (String, String, LocalDate?, Uri?) -> Unit // Envia LocalDate para o ViewModel
 ) {
     var editedFullName by remember { mutableStateOf(fullName) }
-    var editedBirthDate by remember { mutableStateOf(birthDate) }
+
+    // Converte a string da data para LocalDate para uso na UI
+    val initialDate = remember(birthDateString) {
+        if (birthDateString != null) {
+            try {
+                LocalDate.parse(birthDateString, DateTimeFormatter.ISO_LOCAL_DATE)
+            } catch (e: DateTimeParseException) {
+                null // Retorna nulo se a string não for uma data válida
+            }
+        } else {
+            null
+        }
+    }
+    var editedBirthDate by remember { mutableStateOf(initialDate) }
     var editedGender by remember { mutableStateOf(gender) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -52,14 +72,12 @@ fun ProfileScreen(
     val context = LocalContext.current
     val genderOptions = listOf("Masculino", "Feminino", "Outro", "Prefiro não informar")
 
-    // Launcher para seleção de imagem da galeria
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
     }
 
-    // Launcher para captura de foto da câmera
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -68,12 +86,10 @@ fun ProfileScreen(
         }
     }
 
-    // Launcher para permissão de câmera
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Criar URI temporário para a foto
             val uri = androidx.core.content.FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
@@ -91,7 +107,6 @@ fun ProfileScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Header com foto de perfil
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -138,7 +153,6 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Ícone de câmera no canto inferior direito
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -171,7 +185,6 @@ fun ProfileScreen(
             }
         }
 
-        // Informações pessoais
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
@@ -253,10 +266,54 @@ fun ProfileScreen(
             }
         }
 
-        // Botão salvar perfil
+        if (userRole is UserRole.Supervisor) {
+            val clipboardManager = LocalClipboardManager.current
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Seu ID de Supervisor",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = "Compartilhe este ID com os usuários que você deseja supervisionar.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = userId,
+                            fontSize = 16.sp,
+                            fontFamily = FontFamily.Monospace,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            clipboardManager.setText(AnnotatedString(userId))
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copiar ID")
+                        }
+                    }
+                }
+            }
+        }
+
         Button(
             onClick = {
-                onSaveProfile(editedFullName, editedGender, editedBirthDate, userEmail, selectedImageUri)
+                onSaveProfile(editedFullName, editedGender, editedBirthDate, selectedImageUri)
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = TealColor),
@@ -272,7 +329,6 @@ fun ProfileScreen(
         }
     }
 
-    // Dialog para seleção de imagem
     if (showImagePickerDialog) {
         AlertDialog(
             onDismissRequest = { showImagePickerDialog = false },
@@ -311,7 +367,6 @@ fun ProfileScreen(
         )
     }
 
-    // DatePicker Dialog
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
         DatePickerDialog(
@@ -344,7 +399,10 @@ fun ProfileScreenPreview() {
         userName = "João Silva",
         userEmail = "joao@email.com",
         fullName = "João da Silva Santos",
-        birthDate = LocalDate.of(1990, 5, 15),
-        gender = "Masculino"
+        birthDateString = "1990-05-15",
+        gender = "Masculino",
+        userId = "123456789xyz",
+        userRole = UserRole.Supervisor,
+        onSaveProfile = { _, _, _, _ -> }
     )
 }

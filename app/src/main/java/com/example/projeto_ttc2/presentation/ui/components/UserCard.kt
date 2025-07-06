@@ -59,7 +59,7 @@ fun UserCard(
 
             AnimatedVisibility(visible = expanded) {
                 Column {
-                    Divider(modifier = Modifier.padding(vertical = 12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

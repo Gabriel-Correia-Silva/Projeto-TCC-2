@@ -35,4 +35,14 @@ class Converters {
     fun zoneOffsetToString(zoneOffset: ZoneOffset?): String? {
         return zoneOffset?.id
     }
+
+    @TypeConverter
+    fun fromStringList(value: String?): List<String>? {
+        return value?.split(",")?.map { it.trim() }
+    }
+
+    @TypeConverter
+    fun toStringList(list: List<String>?): String? {
+        return list?.joinToString(",")
+    }
 }

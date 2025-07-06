@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +24,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.state.AuthState
+import com.example.projeto_ttc2.presentation.state.ProfileState
 import com.example.projeto_ttc2.presentation.state.UiState
 import com.example.projeto_ttc2.presentation.state.UserRole
 import com.example.projeto_ttc2.presentation.ui.components.MainAppHeader
@@ -31,6 +33,7 @@ import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.HealthConnectViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.ProfileViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -300,16 +303,37 @@ fun AppNavigation(
             }
 
             composable("profile_screen") {
-                val currentUser = Firebase.auth.currentUser
-                ProfileScreen(
-                    userName = currentUser?.displayName?.split(" ")?.firstOrNull() ?: "Usuário",
-                    userEmail = currentUser?.email ?: "",
-                    fullName = currentUser?.displayName ?: "",
-                    onSaveProfile = { name, email, birthDate, gender, imageUri ->
-                        // TODO: Implementar salvamento do perfil
+                val profileViewModel: ProfileViewModel = hiltViewModel()
+                val profileState by profileViewModel.profileState.collectAsStateWithLifecycle()
+
+                when (val state = profileState) {
+                    is ProfileState.Success -> {
+                        val user = state.user
+                        ProfileScreen(
+                            userName = user.name ?: "Usuário",
+                            userEmail = user.email ?: "",
+                            fullName = user.name ?: "",
+                            gender = user.gender ?: "",
+                            profileImageUrl = user.profileImageUrl,
+                            userId = user.id,
+                            userRole = userRole,
+                            birthDateString = user.birthDate, // Passa a data como String
+                            onSaveProfile = { fullName, gender, birthDate, imageUri ->
+                                // O ViewModel lida com a conversão de LocalDate para String
+                                profileViewModel.saveProfile(fullName, gender, birthDate, imageUri)
+                            }
+                        )
                     }
-                )
+                    is ProfileState.Loading -> LoadingScreen()
+                    is ProfileState.Error -> {
+                        Text(text = "Erro ao carregar perfil: ${state.message}")
+                    }
+                    else -> { /* Initial State, pode mostrar um loading também */
+                        LoadingScreen()
+                    }
+                }
             }
+
 
             composable("settings_screen") {
                 SettingsScreen(navController = navController)

@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,23 +21,23 @@ import javax.inject.Singleton
 class StepsRepository @Inject constructor(
     private val passosDao: PassosDao,
     private val healthConnectManager: HealthConnectManager,
-    // CORREÇÃO: Adicionando as dependências ao construtor
     private val firebaseAuth: FirebaseAuth,
     private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "StepsRepository"
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // YYYY-MM-DD
 
     fun getTodayStepsFlow(): Flow<Long> {
-        val today = LocalDate.now()
+        val today = LocalDate.now().format(dateFormatter)
         return passosDao.getPassosPorData(today).map { it?.contagem ?: 0L }
     }
 
     fun getStepsForDate(date: LocalDate): Flow<Passos?> {
-        return passosDao.getPassosPorData(date)
+        return passosDao.getPassosPorData(date.format(dateFormatter))
     }
 
     fun getStepsForPeriod(startDate: LocalDate, endDate: LocalDate): Flow<List<Passos>> {
-        return passosDao.getStepsInPeriod(startDate, endDate)
+        return passosDao.getStepsInPeriod(startDate.format(dateFormatter), endDate.format(dateFormatter))
     }
 
     suspend fun getHourlyStepsForDate(date: LocalDate): Map<Int, Long> {
@@ -81,7 +82,7 @@ class StepsRepository @Inject constructor(
             }
 
             val passosEntities = stepsByDay.map { (date, totalSteps) ->
-                Passos(data = date, contagem = totalSteps, userId = userId)
+                Passos(data = date.format(dateFormatter), contagem = totalSteps, userId = userId)
             }
 
             if (passosEntities.isNotEmpty()) {

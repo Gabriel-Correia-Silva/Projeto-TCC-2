@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -51,7 +52,7 @@ class ProfileViewModel @Inject constructor(
     fun saveProfile(
         fullName: String,
         gender: String,
-        birthDate: LocalDate?,
+        birthDate: LocalDate?, // Recebe LocalDate da UI
         imageUri: Uri?
     ) {
         viewModelScope.launch {
@@ -66,7 +67,8 @@ class ProfileViewModel @Inject constructor(
                 val updates = mutableMapOf<String, Any?>()
                 updates["name"] = fullName
                 updates["gender"] = gender
-                updates["birthDate"] = birthDate
+                // Converte LocalDate para String no formato padrão YYYY-MM-DD
+                updates["birthDate"] = birthDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
                 if (imageUri != null) {
                     val imageUrl = userRepository.uploadProfileImage(currentUser.uid, imageUri)
@@ -75,7 +77,6 @@ class ProfileViewModel @Inject constructor(
 
                 userRepository.updateUser(currentUser.uid, updates)
                 _profileState.value = ProfileState.UpdateSuccess
-                // Recarrega os dados após a atualização bem-sucedida
                 loadUserProfile()
             } catch (e: Exception) {
                 _profileState.value = ProfileState.Error("Falha ao salvar perfil: ${e.message}")

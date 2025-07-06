@@ -3,7 +3,6 @@ package com.example.projeto_ttc2.presentation.ui.screen
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
@@ -21,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -134,13 +134,14 @@ fun HeartRateBarChart(
     modifier: Modifier = Modifier
 ) {
     val dataByHour = data.groupBy {
-        LocalDateTime.ofInstant(it.timestamp, ZoneId.systemDefault()).hour
+        // CORREÇÃO: Converte o Long de volta para um Instant.
+        val instant = Instant.ofEpochMilli(it.timestamp)
+        LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).hour
     }.mapValues { entry ->
         entry.value.map { it.bpm }.average().toLong()
     }
 
     if (dataByHour.isEmpty()) {
-        // Handle empty data case if needed, e.g., show a message
         return
     }
 
@@ -165,7 +166,6 @@ fun HeartRateBarChart(
         val chartWidth = size.width - yAxisSpace
         val chartHeight = size.height - xAxisSpace
 
-        // Draw Y-axis labels and grid lines
         val numGridLines = 4
         for (i in 0..numGridLines) {
             val value = minBpm + (range / numGridLines) * i
@@ -184,7 +184,6 @@ fun HeartRateBarChart(
             )
         }
 
-        // Draw bars and X-axis labels
         val barWidthWithSpacing = chartWidth / 24
         val barWidth = barWidthWithSpacing * 0.7f
 

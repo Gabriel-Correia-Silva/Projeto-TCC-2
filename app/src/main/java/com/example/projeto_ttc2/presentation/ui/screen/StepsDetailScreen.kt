@@ -24,6 +24,7 @@ import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.Period
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -276,7 +277,8 @@ fun PeriodStepsBarChart(data: List<Passos>, period: Period, modifier: Modifier =
         else -> emptyList()
     }
 
-    val dataMap = data.associateBy { it.data.dayOfWeek }
+    // Converte a string da data de volta para LocalDate para encontrar o dia da semana
+    val dataMap = data.associateBy { LocalDate.parse(it.data).dayOfWeek }
 
     Canvas(modifier = modifier) {
         val yAxisSpace = 40.dp.toPx()

@@ -83,11 +83,11 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun registerUser(user: FirebaseUser, name: String, role: String, supervisorId: String?) {
+    fun registerUser(user: FirebaseUser, name: String, role: String, supervisorIds: List<String>?) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
             try {
-                repository.registerUser(user.uid, name, user.email ?: "", role, supervisorId)
+                repository.registerUser(user.uid, name, user.email ?: "", role, supervisorIds)
                 fetchUserRole(user.uid)
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Falha no registro")
@@ -128,7 +128,7 @@ class AuthViewModel @Inject constructor(
                         name = currentUser.displayName ?: "",
                         email = currentUser.email ?: "",
                         role = role,
-                        supervisorId = null
+                        supervisorIds = if (role == "supervised") listOf() else null
                     )
                     fetchUserRole(userId)
                 }

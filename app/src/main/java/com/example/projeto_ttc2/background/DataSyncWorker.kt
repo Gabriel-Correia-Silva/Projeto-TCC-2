@@ -1,6 +1,5 @@
 package com.example.projeto_ttc2.background
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -28,7 +27,6 @@ class DataSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         Log.d("DataSyncWorker", "Iniciando sincronização de dados em segundo plano.")
-        // Define o worker para ser executado em primeiro plano, mostrando a notificação.
         setForeground(createForegroundInfo())
 
         return try {
@@ -37,20 +35,18 @@ class DataSyncWorker @AssistedInject constructor(
             Result.success()
         } catch (e: Exception) {
             Log.e("DataSyncWorker", "Falha na sincronização de dados em segundo plano.", e)
-            Result.failure()
+            Result.retry() // Tenta novamente mais tarde em caso de falha
         }
     }
 
     private fun createForegroundInfo(): ForegroundInfo {
-        // Cria o canal de notificação (necessário para Android 8.0 Oreo e superior)
         createNotificationChannel()
 
-        // Cria a notificação
         val notification = NotificationCompat.Builder(appContext, channelId)
-            .setContentTitle("Sincronizando Dados")
-            .setContentText("Executando em segundo plano.")
-            .setSmallIcon(R.mipmap.ic_launcher) // Use um ícone apropriado do seu app
-            .setOngoing(true) // Torna a notificação não dispensável pelo usuário
+            .setContentTitle("Sincronizando Dados de Saúde")
+            .setContentText("Monitoramento em tempo real ativo.")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setOngoing(true)
             .build()
 
         return ForegroundInfo(notificationId, notification)
@@ -64,7 +60,6 @@ class DataSyncWorker @AssistedInject constructor(
             val channel = NotificationChannel(channelId, name, importance).apply {
                 description = descriptionText
             }
-            // Registra o canal com o sistema
             val notificationManager: NotificationManager =
                 appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)

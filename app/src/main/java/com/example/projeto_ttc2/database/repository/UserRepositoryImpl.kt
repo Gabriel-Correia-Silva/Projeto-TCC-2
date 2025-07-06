@@ -10,7 +10,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,21 +23,17 @@ class UserRepositoryImpl @Inject constructor(
     private val usersCollection = firestore.collection("users")
 
     override suspend fun createUser(user: User) {
-        // Salva no Firestore
         usersCollection.document(user.id).set(user).await()
-        // Salva no Room
         userDao.upsert(user)
     }
 
     override suspend fun getUser(id: String): User? {
-        // Tenta obter do Room primeiro para acesso rápido
         var user = userDao.getById(id)
         if (user == null) {
-            // Se não estiver no Room, busca no Firestore
             val document = usersCollection.document(id).get().await()
             if (document.exists()) {
-                user = document.toObject(User::class.java)
-                // Salva no Room para cache futuro
+                val firestoreUser = document.toObject(User::class.java)
+                user = firestoreUser?.copy(id = document.id) // Garante que o ID está correto
                 user?.let { userDao.upsert(it) }
             }
         }
@@ -46,18 +41,14 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateUser(id: String, updates: Map<String, Any?>) {
-        // Atualiza no Firestore
         usersCollection.document(id).update(updates).await()
 
-        // Atualiza no Room
         val currentUser = userDao.getById(id)
         if (currentUser != null) {
-            // Cria uma cópia atualizada do usuário. Isso é simplificado.
-            // Uma abordagem mais robusta lidaria com cada campo individualmente.
             val updatedUser = currentUser.copy(
                 name = updates["name"] as? String ?: currentUser.name,
                 gender = updates["gender"] as? String ?: currentUser.gender,
-                birthDate = updates["birthDate"] as? LocalDate ?: currentUser.birthDate,
+                birthDate = updates["birthDate"] as? String ?: currentUser.birthDate, // Espera String
                 profileImageUrl = updates["profileImageUrl"] as? String ?: currentUser.profileImageUrl
             )
             userDao.update(updatedUser)
@@ -71,24 +62,24 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun getSupervisedUsers(supervisorId: String): Flow<List<User>> = callbackFlow {
-        val listener = usersCollection.whereEqualTo("supervisorId", supervisorId)
+        // --- LÓGICA DE CONSULTA ATUALIZADA ---
+        val listener = usersCollection.whereArrayContains("supervisorIds", supervisorId)
             .addSnapshotListener { snapshot, error ->
-                // Se houver um erro de permissão ou de rede, o app não vai quebrar, mas o erro será logado.
                 if (error != null) {
                     Log.w("Firestore", "Listen failed.", error)
                     close(error)
                     return@addSnapshotListener
                 }
 
-                // Se a busca for bem-sucedida, envia a lista de usuários para quem estiver "ouvindo" (o ViewModel)
                 if (snapshot != null) {
-                    val users = snapshot.toObjects(User::class.java)
+                    val users = snapshot.documents.mapNotNull { document ->
+                        // Manter o mapeamento manual para evitar outros erros
+                        document.toObject(User::class.java)?.copy(id = document.id)
+                    }
                     Log.d("Firestore", "Supervisionados carregados: ${users.size} usuários encontrados.")
-
                     trySend(users)
                 }
             }
-        // Isso garante que a "escuta" ao Firestore seja cancelada quando a tela for fechada, evitando memory leaks.
         awaitClose { listener.remove() }
     }
 }

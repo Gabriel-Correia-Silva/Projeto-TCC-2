@@ -18,18 +18,38 @@ class SyncRepository @Inject constructor(
 
     suspend fun syncAllData() {
         try {
+            // Adicionando logs detalhados para cada etapa da sincronização
+            Log.d(TAG, "--- INICIANDO SINCRONIZAÇÃO COMPLETA ---")
+
             coroutineScope {
-                val syncTasks = listOf(
-                    async { heartRateRepository.syncData() },
-                    async { stepsRepository.syncData() },
-                    async { sleepRepository.syncData() },
-                    async { caloriesRepository.syncData() }
-                )
-                syncTasks.awaitAll()
-                Log.d(TAG, "Sincronização de todos os dados concluída com sucesso.")
+                val heartRateJob = async {
+                    Log.d(TAG, "Sincronizando Frequência Cardíaca...")
+                    heartRateRepository.syncData()
+                    Log.i(TAG, "Frequência Cardíaca OK.")
+                }
+                val stepsJob = async {
+                    Log.d(TAG, "Sincronizando Passos...")
+                    stepsRepository.syncData()
+                    Log.i(TAG, "Passos OK.")
+                }
+                val sleepJob = async {
+                    Log.d(TAG, "Sincronizando Sono...")
+                    sleepRepository.syncData()
+                    Log.i(TAG, "Sono OK.")
+                }
+                val caloriesJob = async {
+                    Log.d(TAG, "Sincronizando Calorias...")
+                    caloriesRepository.syncData()
+                    Log.i(TAG, "Calorias OK.")
+                }
+
+                // Aguarda a conclusão de todas as tarefas de sincronização
+                awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob)
+
+                Log.d(TAG, "--- SINCRONIZAÇÃO COMPLETA CONCLUÍDA COM SUCESSO ---")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Falha ao sincronizar todos os dados.", e)
+            Log.e(TAG, "--- FALHA GERAL NA SINCRONIZAÇÃO ---", e)
             // Propaga a exceção para que o chamador (Worker ou ViewModel) possa lidar com ela.
             throw e
         }

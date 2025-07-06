@@ -2,12 +2,13 @@ package com.example.projeto_ttc2.database.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDate
+import com.google.firebase.firestore.IgnoreExtraProperties
 
+@IgnoreExtraProperties
 @Entity(tableName = "passos")
 data class Passos(
     @PrimaryKey
-    val data: LocalDate,
-    val contagem: Long,
-    val userId: String // Add this line
+    val data: String = "", // Alterado de LocalDate para String
+    val contagem: Long = 0L,
+    val userId: String = ""
 )

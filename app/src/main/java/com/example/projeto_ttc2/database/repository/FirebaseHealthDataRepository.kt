@@ -9,8 +9,8 @@ interface FirebaseHealthDataRepository {
     suspend fun syncSleepData(userId: String, sleepData: List<Sono>)
     suspend fun syncCaloriesData(userId: String, caloriesData: List<Calorias>)
 
-    suspend fun getUserHeartRateData(userId: String): Flow<List<BatimentoCardiaco>>
-    suspend fun getUserStepsData(userId: String): Flow<List<Passos>>
-    suspend fun getUserSleepData(userId: String): Flow<List<Sono>>
-    suspend fun getUserCaloriesData(userId: String): Flow<List<Calorias>>
+    fun getUserHeartRateData(userId: String): Flow<List<BatimentoCardiaco>>
+    fun getUserStepsData(userId: String): Flow<List<Passos>>
+    fun getUserSleepData(userId: String): Flow<List<Sono>>
+    fun getUserCaloriesData(userId: String): Flow<List<Calorias>>
 }

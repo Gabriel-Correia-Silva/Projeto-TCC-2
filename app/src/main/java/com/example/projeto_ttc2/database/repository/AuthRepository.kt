@@ -50,14 +50,14 @@ class AuthRepository @Inject constructor(
         name: String,
         email: String,
         role: String,
-        supervisorId: String? = null
+        supervisorIds: List<String>? = null
     ) {
 
         val userData = hashMapOf(
             "name" to name,
             "email" to email,
             "role" to role,
-            "supervisorId" to supervisorId
+            "supervisorIds" to supervisorIds
         )
 
         firestore.collection("users").document(userId).set(userData).await()

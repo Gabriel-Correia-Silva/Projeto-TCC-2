@@ -12,11 +12,11 @@ import com.google.firebase.auth.FirebaseUser
 @Composable
 fun RegistrationScreen(
     user: FirebaseUser,
-    onRegister: (name: String, role: String, supervisorId: String?) -> Unit
+    onRegister: (name: String, role: String, supervisorIds: List<String>?) -> Unit
 ) {
     var name by remember { mutableStateOf(user.displayName ?: "") }
     var selectedRole by remember { mutableStateOf("") }
-    var supervisorId by remember { mutableStateOf("") }
+    var supervisorIdsText by remember { mutableStateOf("") }
     val roles = listOf("supervisor", "supervised")
 
     Column(
@@ -40,7 +40,6 @@ fun RegistrationScreen(
         Text("Qual é a sua função?", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Seleção de Função (Role)
         Column {
             roles.forEach { role ->
                 Row(
@@ -65,27 +64,31 @@ fun RegistrationScreen(
             }
         }
 
-        // Campo de ID do Supervisor (só aparece se 'supervised' for selecionado)
         if (selectedRole == "supervised") {
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
-                value = supervisorId,
-                onValueChange = { supervisorId = it },
-                label = { Text("ID do Supervisor") },
-                placeholder = { Text("Peça o ID ao seu supervisor") },
+                value = supervisorIdsText,
+                onValueChange = { supervisorIdsText = it },
+                label = { Text("ID(s) do(s) Supervisor(es)") },
+                placeholder = { Text("Separe os IDs por vírgula") },
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
-        Spacer(modifier = Modifier.weight(1f)) // Empurra o botão para baixo
+        Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = {
-                onRegister(name, selectedRole, if (selectedRole == "supervised") supervisorId else null)
+                val supervisorIdsList = if (selectedRole == "supervised") {
+                    supervisorIdsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                } else {
+                    null
+                }
+                onRegister(name, selectedRole, supervisorIdsList)
             },
             modifier = Modifier.fillMaxWidth(),
-            // O botão só fica ativo se todas as condições forem atendidas
-            enabled = name.isNotBlank() && selectedRole.isNotBlank() && (selectedRole != "supervised" || supervisorId.isNotBlank())
+
+            enabled = name.isNotBlank() && selectedRole.isNotBlank() && (selectedRole != "supervised" || supervisorIdsText.isNotBlank())
         ) {
             Text("Finalizar Cadastro")
         }

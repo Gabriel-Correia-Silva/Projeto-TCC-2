@@ -21,13 +21,13 @@ import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 @Composable
 fun UserCard(
     user: User,
-    // Dados de saúde virão do ViewModel
     steps: Long,
     calories: Double,
     heartRate: Long,
     sleep: String,
     activity: Int,
-    onChatClick: () -> Unit
+    // --- ALTERAÇÃO AQUI ---
+    onDetailsClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -78,12 +78,13 @@ fun UserCard(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // --- BOTÃO ATUALIZADO ---
                     Button(
-                        onClick = onChatClick,
+                        onClick = onDetailsClick, // Ação atualizada
                         modifier = Modifier.align(Alignment.End),
                         colors = ButtonDefaults.buttonColors(containerColor = TealGreen)
                     ) {
-                        Text("Chat")
+                        Text("Ver Detalhes") // Texto atualizado
                     }
                 }
             }

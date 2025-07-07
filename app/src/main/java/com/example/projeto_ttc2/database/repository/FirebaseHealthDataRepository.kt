@@ -13,4 +13,5 @@ interface FirebaseHealthDataRepository {
     fun getUserStepsData(userId: String): Flow<List<Passos>>
     fun getUserSleepData(userId: String): Flow<List<Sono>>
     fun getUserCaloriesData(userId: String): Flow<List<Calorias>>
+    fun getAllHeartRateData(userId: String): Flow<List<BatimentoCardiaco>>
 }

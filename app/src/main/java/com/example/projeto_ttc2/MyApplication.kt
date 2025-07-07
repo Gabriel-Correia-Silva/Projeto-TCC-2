@@ -20,6 +20,7 @@ class MyApplication : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(android.util.Log.DEBUG)
             .build()
 
     override fun onCreate() {
@@ -28,9 +29,8 @@ class MyApplication : Application(), Configuration.Provider {
     }
 
     private fun setupRecurringWork() {
-        val workRequest = PeriodicWorkRequestBuilder<DataSyncWorker>(
-            15, TimeUnit.SECONDS // Repete a cada 1 hora
-        ).build()
+        val workRequest = PeriodicWorkRequestBuilder<DataSyncWorker>(15, TimeUnit.MINUTES)
+            .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "DataSyncWork",

@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat // Ícone para o chat/profissional
+import com.example.projeto_ttc2.presentation.ui.screen.PatientDetailScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -271,7 +271,7 @@ fun AppNavigation(
 
             // ROTA DO SUPERVISOR ATUALIZADA
             composable("supervisor_dashboard") {
-                SupervisorDashboardScreen() // Chama a nova tela do supervisor
+                SupervisorDashboardScreen(navController = navController) // Chama a nova tela do supervisor
             }
 
             // ROTA DO SUPERVISIONADO (Paciente)
@@ -300,6 +300,11 @@ fun AppNavigation(
             // NOVA ROTA PARA A TELA PROFISSIONAL
             composable("professional_screen") {
                 ProfessionalScreen()
+            }
+
+            composable("patient_detail/{patientId}") {
+                // Não precisa mais passar o ID manualmente, o Hilt e o ViewModel cuidam disso.
+                PatientDetailScreen()
             }
 
             composable("profile_screen") {

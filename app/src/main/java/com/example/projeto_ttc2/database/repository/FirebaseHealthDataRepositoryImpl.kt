@@ -80,11 +80,9 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
 
     override fun getUserHeartRateData(userId: String): Flow<List<BatimentoCardiaco>> = flow {
         if (userId.isNotBlank()) {
-            // --- CONSULTA CORRIGIDA ---
-            // Busca o último registro de batimento cardíaco, independentemente da data.
             val snapshot = firestore.collection("users").document(userId).collection("heart_rate")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(1)
+                .limit(1) // Busca apenas o registro mais recente
                 .get()
                 .await()
             val heartRateList = snapshot.documents.mapNotNull { document ->
@@ -98,6 +96,31 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
                     )
                 } catch (e: Exception) {
                     Log.e("FirestoreParseError", "Falha ao analisar Batimento: ${document.id}", e)
+                    null
+                }
+            }
+            emit(heartRateList)
+        } else {
+            emit(emptyList())
+        }
+    }
+    override fun getAllHeartRateData(userId: String): Flow<List<BatimentoCardiaco>> = flow {
+        if (userId.isNotBlank()) {
+            val snapshot = firestore.collection("users").document(userId).collection("heart_rate")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            val heartRateList = snapshot.documents.mapNotNull { document ->
+                try {
+                    BatimentoCardiaco(
+                        timestamp = document.getLong("timestamp") ?: 0L,
+                        healthConnectId = document.getString("healthConnectId") ?: "",
+                        bpm = document.getLong("bpm") ?: 0L,
+                        zoneOffset = document.getString("zoneOffset"),
+                        userId = document.getString("userId") ?: ""
+                    )
+                } catch (e: Exception) {
+                    Log.e("FirestoreParseError", "Falha ao analisar Batimento (histórico): ${document.id}", e)
                     null
                 }
             }

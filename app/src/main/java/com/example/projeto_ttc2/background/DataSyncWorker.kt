@@ -27,15 +27,14 @@ class DataSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         Log.d("DataSyncWorker", "Iniciando sincronização de dados em segundo plano.")
-        setForeground(createForegroundInfo())
-
-        return try {
+        try {
+            setForeground(createForegroundInfo())
             syncRepository.syncAllData()
             Log.d("DataSyncWorker", "Sincronização de dados em segundo plano concluída com sucesso.")
-            Result.success()
+            return Result.success()
         } catch (e: Exception) {
             Log.e("DataSyncWorker", "Falha na sincronização de dados em segundo plano.", e)
-            Result.retry() // Tenta novamente mais tarde em caso de falha
+            return Result.retry()
         }
     }
 
@@ -44,8 +43,8 @@ class DataSyncWorker @AssistedInject constructor(
 
         val notification = NotificationCompat.Builder(appContext, channelId)
             .setContentTitle("Sincronizando Dados de Saúde")
-            .setContentText("Monitoramento em tempo real ativo.")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentText("O monitoramento em tempo real está ativo.")
+            .setSmallIcon(R.mipmap.ic_launcher) // Certifique-se que este ícone existe
             .setOngoing(true)
             .build()
 

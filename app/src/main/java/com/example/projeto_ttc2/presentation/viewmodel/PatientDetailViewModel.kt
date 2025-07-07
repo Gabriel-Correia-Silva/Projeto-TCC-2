@@ -1,0 +1,54 @@
+package com.example.projeto_ttc2.presentation.viewmodel
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.entities.Passos
+import com.example.projeto_ttc2.database.entities.Sono
+import com.example.projeto_ttc2.database.entities.User
+import com.example.projeto_ttc2.database.repository.FirebaseHealthDataRepository
+import com.example.projeto_ttc2.database.repository.UserRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class PatientDetailViewModel @Inject constructor(
+    private val userRepository: UserRepository,
+    private val healthDataRepository: FirebaseHealthDataRepository,
+    savedStateHandle: SavedStateHandle
+) : ViewModel() {
+
+    private val patientId: String = savedStateHandle.get<String>("patientId")!!
+
+    private val _patient = MutableStateFlow<User?>(null)
+    val patient: StateFlow<User?> = _patient.asStateFlow()
+
+    private val _stepsData = MutableStateFlow<List<Passos>>(emptyList())
+    val stepsData: StateFlow<List<Passos>> = _stepsData.asStateFlow()
+
+    private val _heartRateData = MutableStateFlow<List<BatimentoCardiaco>>(emptyList())
+    val heartRateData: StateFlow<List<BatimentoCardiaco>> = _heartRateData.asStateFlow()
+
+    private val _sleepData = MutableStateFlow<List<Sono>>(emptyList())
+    val sleepData: StateFlow<List<Sono>> = _sleepData.asStateFlow()
+
+    init {
+        loadAllData()
+    }
+
+    private fun loadAllData() {
+        viewModelScope.launch {
+            _patient.value = userRepository.getUser(patientId)
+
+            // --- ATUALIZAÇÃO DA CHAMADA ---
+            healthDataRepository.getUserStepsData(patientId).collect { _stepsData.value = it }
+            healthDataRepository.getAllHeartRateData(patientId).collect { _heartRateData.value = it } // Usa a nova função
+            healthDataRepository.getUserSleepData(patientId).collect { _sleepData.value = it }
+        }
+    }
+}

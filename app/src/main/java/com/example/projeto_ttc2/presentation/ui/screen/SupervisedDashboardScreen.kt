@@ -9,12 +9,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.ui.components.*
 import com.example.projeto_ttc2.presentation.ui.theme.defaultCard
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +24,7 @@ import kotlinx.coroutines.delay
 fun SupervisedDashboardScreen(
     userName: String,
     dashboardViewModel: DashboardViewModel,
+    emergencyContactViewModel: EmergencyContactViewModel,
     dashboardData: DashboardData,
     heartRateData: List<Long> = emptyList(),
     onSosClick: () -> Unit,
@@ -34,6 +37,19 @@ fun SupervisedDashboardScreen(
     onNavigateToSteps: () -> Unit
 ) {
     val unreadFeedbackCount by dashboardViewModel.unreadFeedbackCount.collectAsStateWithLifecycle(initialValue = 0)
+    val showHeartRateAlert by dashboardViewModel.showHeartRateAlert.collectAsStateWithLifecycle()
+    val primaryContact by emergencyContactViewModel.primaryContact.collectAsStateWithLifecycle()
+    val oxygenationHistory by dashboardViewModel.oxygenationHistory.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    if (showHeartRateAlert) {
+        HeartRateAlertDialog(
+            onDismiss = { dashboardViewModel.dismissHeartRateAlert() },
+            onConfirm = {
+                dashboardViewModel.triggerEmergencyActions(context, primaryContact?.phone)
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -55,7 +71,6 @@ fun SupervisedDashboardScreen(
     }
 
     if (showIncentiveDialog) {
-        // CORREÇÃO: Removido o .toInt() para corresponder ao tipo Long esperado.
         IncentiveDialog(
             steps = dashboardData.steps,
             onDismiss = { showIncentiveDialog = false }
@@ -88,7 +103,6 @@ fun SupervisedDashboardScreen(
                 )
             }
             item {
-                // CORREÇÃO: Removido o .toInt() para corresponder ao tipo Long esperado.
                 StepsCard(
                     steps = dashboardData.steps.toInt(),
                     goal = dashboardData.stepsGoal,
@@ -98,7 +112,6 @@ fun SupervisedDashboardScreen(
                 )
             }
             item {
-                // CORREÇÃO: Removidas as conversões .toInt() para corresponder ao tipo Double.
                 CaloriesCard(
                     activeKcal = dashboardData.activeCaloriesKcal,
                     totalKcal = dashboardData.caloriesKcal,
@@ -108,6 +121,7 @@ fun SupervisedDashboardScreen(
             item {
                 OxygenationCard(
                     spo2 = dashboardData.oxygenSaturation,
+                    historicalSpo2 = oxygenationHistory,
                     cardColor = MaterialTheme.colorScheme.defaultCard
                 )
             }

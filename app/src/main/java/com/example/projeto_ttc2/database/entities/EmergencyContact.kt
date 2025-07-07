@@ -7,7 +7,7 @@ import com.google.firebase.firestore.Exclude
 
 @Entity(
     tableName = "emergency_contacts",
-    indices = [Index(value = ["firestoreId"], unique = true)] // Garante que cada ID do Firestore seja único
+    indices = [Index(value = ["firestoreId"], unique = true)]
 )
 data class EmergencyContact(
     @PrimaryKey(autoGenerate = true)

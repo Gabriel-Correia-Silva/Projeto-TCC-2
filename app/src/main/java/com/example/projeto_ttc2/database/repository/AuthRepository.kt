@@ -20,7 +20,6 @@ class AuthRepository @Inject constructor(
         return auth.currentUser
     }
 
-    // Função adicionada para resolver o erro de compilação
     fun getCurrentUserFlow(): Flow<FirebaseUser?> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             trySend(firebaseAuth.currentUser)

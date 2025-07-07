@@ -18,7 +18,7 @@ fun AlertsCard() {
     DashboardCard {
         Text("Meus Alertas Recentes", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { // Adiciona 8.dp de espaço entre cada alerta.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("• Alerta de queda detectado (05/02)", color = Color.White)
 
             Text("• Bateria fraca do sensor (04/02)", color = Color.White)

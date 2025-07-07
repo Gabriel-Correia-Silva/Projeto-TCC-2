@@ -16,8 +16,7 @@ import com.example.projeto_ttc2.presentation.viewmodel.SupervisorViewModel
 
 @Composable
 fun SupervisorDashboardScreen(
-    // --- ALTERAÇÃO AQUI ---
-    navController: NavController, // Adicionado NavController
+    navController: NavController,
     viewModel: SupervisorViewModel = hiltViewModel()
 ) {
     val supervisedUsers by viewModel.supervisedUsers.collectAsStateWithLifecycle()
@@ -58,9 +57,7 @@ fun SupervisorDashboardScreen(
                     sleep = "${summary.sleep / 60}h ${summary.sleep % 60}m",
                     calories = summary.calories,
                     activity = 0,
-                    // --- ALTERAÇÃO AQUI ---
                     onDetailsClick = {
-                        // Navega para a nova tela de detalhes com o ID do paciente
                         navController.navigate("patient_detail/${user.id}")
                     }
                 )

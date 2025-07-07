@@ -1,19 +1,27 @@
 package com.example.projeto_ttc2.presentation.ui.screen
 
+import android.graphics.Paint
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,10 +31,14 @@ import androidx.navigation.NavController
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.Period
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
+
+data class BarData(val value: Float, val label: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +50,9 @@ fun StepsDetailScreen(
     val totalStepsForPeriod by dashboardViewModel.totalStepsForPeriod.collectAsStateWithLifecycle()
     val hourlySteps by dashboardViewModel.hourlyStepsForDate.collectAsStateWithLifecycle()
     val periodStepsData by dashboardViewModel.stepsForPeriod.collectAsStateWithLifecycle()
+    val distanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
 
-    // Carga inicial dos dados
+
     LaunchedEffect(Unit) {
         dashboardViewModel.setPeriod(Period.SEMANA)
     }
@@ -56,102 +69,199 @@ fun StepsDetailScreen(
         ) {
             TotalStepsCard(
                 steps = totalStepsForPeriod,
+                distanceKm = distanceKm,
                 selectedPeriod = selectedPeriod,
                 onPeriodSelected = { dashboardViewModel.setPeriod(it) }
             )
 
-            // Lógica para exibir o gráfico correto
-            if (selectedPeriod == Period.DIA) {
-                if (hourlySteps.isNotEmpty()) {
-                    // Função que estava faltando, agora adicionada abaixo
-                    StepsBarChart(dataByHour = hourlySteps, modifier = Modifier.fillMaxWidth().height(250.dp))
-                } else {
-                    EmptyState()
+            val chartData = remember(selectedPeriod, hourlySteps, periodStepsData) {
+                when (selectedPeriod) {
+                    Period.DIA -> (0..23).map { hour ->
+                        BarData(
+                            value = hourlySteps[hour]?.toFloat() ?: 0f,
+                            label = hour.toString().padStart(2, '0')
+                        )
+                    }
+                    Period.SEMANA -> {
+                        val dataMap = periodStepsData.associateBy { LocalDate.parse(it.data).dayOfWeek }
+                        DayOfWeek.values().map { day ->
+                            BarData(
+                                value = dataMap[day]?.contagem?.toFloat() ?: 0f,
+                                label = day.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")).take(3)
+                            )
+                        }
+                    }
+                    Period.MES -> periodStepsData.map {
+                        BarData(
+                            value = it.contagem.toFloat(),
+                            label = LocalDate.parse(it.data).dayOfMonth.toString()
+                        )
+                    }
                 }
+            }
+
+            if (chartData.any { it.value > 0 }) {
+                InteractiveBarChart(
+                    data = chartData,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                )
             } else {
-                if (periodStepsData.isNotEmpty()) {
-                    PeriodStepsBarChart(data = periodStepsData, period = selectedPeriod, modifier = Modifier.fillMaxWidth().height(250.dp))
-                } else {
-                    EmptyState()
-                }
+                EmptyState()
             }
         }
     }
 }
 
-// **A FUNÇÃO QUE ESTAVA FALTANDO FOI ADICIONADA AQUI**
 @Composable
-fun StepsBarChart(
-    dataByHour: Map<Int, Long>,
+fun InteractiveBarChart(
+    data: List<BarData>,
     modifier: Modifier = Modifier
 ) {
-    if (dataByHour.isEmpty()) return
-
-    val maxSteps = (dataByHour.values.maxOrNull() ?: 1000L).toFloat()
     val density = LocalDensity.current
     val primaryColor = MaterialTheme.colorScheme.primary
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
 
-    val textPaint = android.graphics.Paint().apply {
-        color = onSurfaceColor.hashCode()
-        textAlign = android.graphics.Paint.Align.CENTER
-        textSize = with(density) { 12.sp.toPx() }
-    }
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    val animationProgress = remember { List(data.size) { Animatable(0f) } }
 
-    Canvas(modifier = modifier) {
-        val yAxisSpace = 40.dp.toPx()
-        val xAxisSpace = 30.dp.toPx()
-        val chartWidth = size.width - yAxisSpace
-        val chartHeight = size.height - xAxisSpace
-
-        // Eixo Y
-        val numGridLines = 4
-        for (i in 0..numGridLines) {
-            val value = (maxSteps / numGridLines) * i
-            val y = chartHeight - (value / maxSteps * chartHeight)
-            drawLine(
-                color = Color.LightGray,
-                start = Offset(yAxisSpace, y),
-                end = Offset(size.width, y),
-                strokeWidth = 1f
-            )
-            drawContext.canvas.nativeCanvas.drawText(
-                "${value.toInt()}",
-                yAxisSpace / 2,
-                y + textPaint.textSize / 2,
-                textPaint
-            )
-        }
-
-        // Eixo X e Barras
-        val barWidthWithSpacing = chartWidth / 24
-        val barWidth = barWidthWithSpacing * 0.7f
-
-        for (hour in 0..23) {
-            val steps = dataByHour[hour]?.toFloat() ?: 0f
-            val x = yAxisSpace + (barWidthWithSpacing * hour)
-
-            if (steps > 0) {
-                val barHeight = (steps / maxSteps * chartHeight).coerceAtLeast(0f)
-                drawRect(
-                    color = primaryColor,
-                    topLeft = Offset(x, chartHeight - barHeight),
-                    size = Size(barWidth, barHeight)
+    LaunchedEffect(data) {
+        animationProgress.forEachIndexed { index, animatable ->
+            launch {
+                animatable.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 500, delayMillis = index * 50)
                 )
             }
+        }
+    }
 
-            if (hour % 3 == 0) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    hour.toString().padStart(2, '0'),
-                    x + barWidth / 2,
-                    size.height - (xAxisSpace / 4),
-                    textPaint
+    val maxValue = remember(data) { (data.maxOfOrNull { it.value } ?: 1f).coerceAtLeast(1f) }
+
+    val textPaint = remember(onSurfaceColor) {
+        Paint().apply {
+            color = onSurfaceColor.hashCode()
+            textAlign = Paint.Align.CENTER
+            textSize = with(density) { 12.sp.toPx() }
+        }
+    }
+
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(data) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = { selectedIndex = null },
+                        onHorizontalDrag = { change, _ ->
+                            val touchX = change.position.x
+                            val barWidthWithSpacing = size.width / data.size
+                            val index = (touchX / barWidthWithSpacing).toInt().coerceIn(0, data.size - 1)
+                            selectedIndex = index
+                        }
+                    )
+                }
+        ) {
+            val yAxisSpace = with(density) { 40.dp.toPx() }
+            val xAxisSpace = with(density) { 30.dp.toPx() }
+            val chartWidth = size.width - yAxisSpace
+            val chartHeight = size.height - xAxisSpace
+            val barWidthWithSpacing = chartWidth / data.size
+            val barWidth = barWidthWithSpacing * 0.6f
+
+            // Desenha o eixo Y e as linhas de grade
+            val numGridLines = 4
+            (0..numGridLines).forEach { i ->
+                val value = maxValue / numGridLines * i
+                val y = chartHeight - (value / maxValue * chartHeight)
+                drawLine(
+                    color = Color.LightGray.copy(alpha = 0.5f),
+                    start = Offset(yAxisSpace, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1f
                 )
+                drawIntoCanvas {
+                    it.nativeCanvas.drawText(
+                        value.toInt().toString(),
+                        yAxisSpace / 2,
+                        y + textPaint.textSize / 2,
+                        textPaint
+                    )
+                }
+            }
+
+            // Desenha as barras e os rótulos do eixo X
+            data.forEachIndexed { index, barData ->
+                val x = yAxisSpace + (barWidthWithSpacing * index) + (barWidthWithSpacing - barWidth) / 2
+                val barHeight = (barData.value / maxValue * chartHeight) * animationProgress[index].value
+                val barGradient = Brush.verticalGradient(
+                    colors = listOf(primaryColor.copy(alpha = 0.6f), primaryColor)
+                )
+
+                if (barHeight > 0) {
+                    drawRoundRect(
+                        brush = barGradient,
+                        topLeft = Offset(x, chartHeight - barHeight),
+                        size = Size(barWidth, barHeight),
+                        cornerRadius = CornerRadius(4.dp.toPx())
+                    )
+                }
+
+                drawIntoCanvas {
+                    it.nativeCanvas.drawText(
+                        barData.label,
+                        x + barWidth / 2,
+                        size.height - (xAxisSpace / 4),
+                        textPaint
+                    )
+                }
+            }
+
+            // Desenha a linha de destaque e o tooltip
+            selectedIndex?.let { index ->
+                val barData = data[index]
+                val x = yAxisSpace + (barWidthWithSpacing * index) + barWidthWithSpacing / 2
+
+                // Linha de destaque
+                drawLine(
+                    color = onSurfaceColor,
+                    start = Offset(x, 0f),
+                    end = Offset(x, chartHeight),
+                    strokeWidth = 2f
+                )
+
+                // Tooltip
+                val tooltipText = "${barData.value.toInt()} passos"
+                val textWidth = textPaint.measureText(tooltipText)
+                val tooltipPath = Path().apply {
+                    val padding = 8.dp.toPx()
+                    val rectHeight = textPaint.textSize + padding * 2
+                    val rectWidth = textWidth + padding * 2
+                    val rectX = (x - rectWidth / 2).coerceIn(0f, size.width - rectWidth)
+                    val rectY = 0f
+
+                    addRoundRect(
+                        androidx.compose.ui.geometry.RoundRect(
+                            rect = androidx.compose.ui.geometry.Rect(rectX, rectY, rectX + rectWidth, rectY + rectHeight),
+                            cornerRadius = CornerRadius(8.dp.toPx())
+                        )
+                    )
+                }
+
+                drawPath(tooltipPath, color = onSurfaceColor)
+                drawIntoCanvas {
+                    it.nativeCanvas.drawText(
+                        tooltipText,
+                        x.coerceIn(textWidth / 2 + 8.dp.toPx(), size.width - textWidth / 2 - 8.dp.toPx()),
+                        textPaint.textSize + 8.dp.toPx(),
+                        textPaint.apply { color = Color.White.hashCode() }
+                    )
+                }
             }
         }
     }
 }
-
 
 @Composable
 fun EmptyState() {
@@ -161,7 +271,7 @@ fun EmptyState() {
             .height(250.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text("Sem dados de passos para este período.")
+        Text("Sem dados de passos para este período.", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
     }
 }
 
@@ -169,6 +279,7 @@ fun EmptyState() {
 @Composable
 private fun TotalStepsCard(
     steps: Long,
+    distanceKm: Double,
     selectedPeriod: Period,
     onPeriodSelected: (Period) -> Unit
 ) {
@@ -213,7 +324,6 @@ private fun TotalStepsCard(
                         expanded = periodExpanded,
                         onDismissRequest = { periodExpanded = false }
                     ) {
-                        // Correção: Usar .entries em vez de .values()
                         Period.entries.forEach { period ->
                             DropdownMenuItem(
                                 text = { Text(period.name.lowercase().replaceFirstChar { it.uppercase() }) },
@@ -241,144 +351,17 @@ private fun TotalStepsCard(
                     modifier = Modifier.weight(1f)
                 )
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Distância: -- km", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f))
-                    Text("Tempo total: --", color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f))
+                    Text(
+                        "Distância: ${"%.2f".format(distanceKm)} km",
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    )
+                    // O tempo total pode ser calculado com base nos dados de atividade, se disponíveis
+                    Text(
+                        "Tempo total: --",
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    )
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(onClick = { /* TODO: Share action */ }) {
-                    Icon(Icons.Default.Share, contentDescription = "Compartilhar", tint = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
         }
-    }
-}
-
-@Composable
-fun PeriodStepsBarChart(data: List<Passos>, period: Period, modifier: Modifier = Modifier) {
-    val maxSteps = (data.maxOfOrNull { it.contagem } ?: 1000L).toFloat()
-    val density = LocalDensity.current
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-
-    val textPaint = android.graphics.Paint().apply {
-        color = onSurfaceColor.hashCode()
-        textAlign = android.graphics.Paint.Align.CENTER
-        textSize = with(density) { 12.sp.toPx() }
-    }
-
-    val labels = when (period) {
-        Period.SEMANA -> DayOfWeek.values().map { it.getDisplayName(TextStyle.SHORT, Locale("pt", "BR")).take(3) }
-        Period.MES -> (1..data.size).map { it.toString() }
-        else -> emptyList()
-    }
-
-    // Converte a string da data de volta para LocalDate para encontrar o dia da semana
-    val dataMap = data.associateBy { LocalDate.parse(it.data).dayOfWeek }
-
-    Canvas(modifier = modifier) {
-        val yAxisSpace = 40.dp.toPx()
-        val xAxisSpace = 30.dp.toPx()
-        val chartWidth = size.width - yAxisSpace
-        val chartHeight = size.height - xAxisSpace
-
-        // Eixo Y
-        (0..4).forEach { i ->
-            val value = maxSteps / 4 * i
-            val y = chartHeight - (value / maxSteps * chartHeight)
-            drawContext.canvas.nativeCanvas.drawText("${value.toInt()}", yAxisSpace / 2, y + textPaint.textSize / 2, textPaint)
-        }
-
-        // Eixo X e Barras
-        val barCount = if (period == Period.SEMANA) 7 else data.size
-        val barWidthWithSpacing = chartWidth / barCount
-        val barWidth = barWidthWithSpacing * 0.6f
-
-        (0 until barCount).forEach { index ->
-            val day = DayOfWeek.values()[index]
-            val steps = (if (period == Period.SEMANA) dataMap[day]?.contagem else data.getOrNull(index)?.contagem) ?: 0L
-            val x = yAxisSpace + (barWidthWithSpacing * index) + (barWidthWithSpacing - barWidth) / 2
-
-            if (steps > 0) {
-                val barHeight = (steps / maxSteps * chartHeight).coerceAtLeast(0f)
-                drawRect(
-                    color = primaryColor,
-                    topLeft = Offset(x, chartHeight - barHeight),
-                    size = Size(barWidth, barHeight)
-                )
-            }
-
-            drawContext.canvas.nativeCanvas.drawText(labels[index], x + barWidth / 2, size.height - (xAxisSpace / 4), textPaint)
-        }
-    }
-}
-
-@Composable
-private fun EmergencyCallFAB(onClick: () -> Unit) {
-    FloatingActionButton(
-        onClick = onClick,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.error,
-        contentColor = MaterialTheme.colorScheme.onError,
-        modifier = Modifier.size(72.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Call,
-            contentDescription = "Ligação de emergência",
-            modifier = Modifier.size(36.dp)
-        )
-    }
-}
-
-@Composable
-private fun ActivitiesCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Atividades",
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            ActivityItem(name = "Atividade leve", duration = "0h 15min", date = "05/02")
-            ActivityItem(name = "Atividade leve", duration = "0h 35min", date = "05/02")
-        }
-    }
-}
-
-@Composable
-private fun ActivityItem(name: String, duration: String, date: String) {
-    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.DirectionsWalk,
-            contentDescription = null,
-            tint = onPrimaryColor,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = onPrimaryColor, fontWeight = FontWeight.SemiBold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.History, contentDescription = null, tint = onPrimaryColor.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(duration, color = onPrimaryColor.copy(alpha = 0.8f), fontSize = 12.sp)
-            }
-        }
-        Text(date, color = onPrimaryColor.copy(alpha = 0.8f), fontSize = 12.sp)
     }
 }

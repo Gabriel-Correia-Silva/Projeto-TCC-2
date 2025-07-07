@@ -1,7 +1,6 @@
 package com.example.projeto_ttc2.presentation.ui.navigation
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -58,7 +57,7 @@ fun AppNavigation(
                 "supervisor_dashboard", "supervised_dashboard", "settings_screen",
                 "sleep_screen", "emergency_contacts_screen", "heart_rate_detail_screen",
                 "steps_detail_screen", "profile_screen", "night_monitoring_screen",
-                "professional_screen", "feedback_list_screen"
+                "professional_screen", "feedback_list_screen", "sensors_settings_screen"
             )
             val isDashboard = currentRoute in listOf("supervisor_dashboard", "supervised_dashboard")
             if (currentRoute in routesWithHeader) {
@@ -75,6 +74,7 @@ fun AppNavigation(
                         "night_monitoring_screen" -> "Monitoramento Noturno"
                         "professional_screen" -> "Profissional"
                         "feedback_list_screen" -> "Centro de Feedback"
+                        "sensors_settings_screen" -> "Metas e Alertas"
                         else -> "App"
                     },
                     showBackArrow = !isDashboard,
@@ -176,11 +176,11 @@ fun AppNavigation(
             }
 
             composable("supervised_dashboard") {
-                // CORREÇÃO: Removido o .collectAsState() desnecessário.
                 val uiState by healthConnectViewModel.uiState
                 val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
                 val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
                 val todaySteps by dashboardViewModel.todaySteps.collectAsStateWithLifecycle()
+                val stepGoal by dashboardViewModel.stepGoal.collectAsStateWithLifecycle() // Carrega a meta de passos
                 val todayDistanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
                 val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
                 val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
@@ -190,8 +190,10 @@ fun AppNavigation(
                 SupervisedDashboardScreen(
                     userName = userName,
                     dashboardViewModel = dashboardViewModel,
+                    emergencyContactViewModel = emergencyContactViewModel,
                     dashboardData = DashboardData(
-                        heartRate = latestBpm, steps = todaySteps, distanceKm = todayDistanceKm,
+                        heartRate = latestBpm, steps = todaySteps, stepsGoal = stepGoal.toInt(),
+                        distanceKm = todayDistanceKm,
                         activeCaloriesKcal = activeCalories, caloriesKcal = totalCalories,
                         sleepSession = sleepSession,
                         oxygenSaturation = oxygenSaturation
@@ -211,6 +213,7 @@ fun AppNavigation(
             composable("professional_screen") { ProfessionalScreen() }
             composable("patient_detail/{patientId}") { PatientDetailScreen() }
             composable("settings_screen") { SettingsScreen(navController = navController) }
+            composable("sensors_settings_screen") { SensorsSettingsScreen() }
             composable("feedback_list_screen") { FeedbackListScreen() }
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
 

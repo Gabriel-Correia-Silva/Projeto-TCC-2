@@ -8,7 +8,7 @@ import com.google.firebase.firestore.IgnoreExtraProperties
 @Entity(tableName = "passos")
 data class Passos(
     @PrimaryKey
-    val data: String = "", // Alterado de LocalDate para String
+    val data: String = "",
     val contagem: Long = 0L,
     val userId: String = ""
 )

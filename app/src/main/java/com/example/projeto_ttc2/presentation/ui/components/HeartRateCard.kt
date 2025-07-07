@@ -24,12 +24,10 @@ fun HeartRateCard(
     bpm: Long,
     heartRateData: List<Long> = emptyList(),
     onClick: () -> Unit,
-    // Adicionando o parâmetro de cor
     cardColor: Color = TealGreen
 ) {
     DashboardCard(
         onClick = onClick,
-        // Repassando a cor
         cardColor = cardColor
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -68,7 +66,7 @@ fun HeartRateCard(
             HeartRateChart(
                 data = heartRateData,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f) // Ocupa 60% da largura disponível
+                    .fillMaxWidth(0.9f)
                     .height(70.dp)
             )
         }
@@ -104,7 +102,6 @@ fun HeartRateChart(
 }
 
 private fun DrawScope.drawEmptyChart() {
-    // Linha de base sutil
     drawLine(
         color = Color.White.copy(alpha = 0.2f),
         start = Offset(0f, size.height * 0.7f),
@@ -113,7 +110,6 @@ private fun DrawScope.drawEmptyChart() {
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f))
     )
 
-    // Texto indicativo
     drawContext.canvas.nativeCanvas.apply {
         drawText(
             "Sem dados",
@@ -133,14 +129,12 @@ private fun DrawScope.drawSinglePointChart(bpm: Long) {
     val centerY = size.height * 0.5f
     val centerX = size.width * 0.5f
 
-    // Ponto único
     drawCircle(
         color = Color.White,
         radius = 4.dp.toPx(),
         center = Offset(centerX, centerY)
     )
 
-    // Linha de base
     drawLine(
         color = Color.White.copy(alpha = 0.3f),
         start = Offset(0f, centerY),
@@ -154,14 +148,12 @@ private fun DrawScope.drawHeartRateChart(data: List<Long>) {
     val minValue = data.minOrNull()?.toFloat() ?: 60f
     val range = (maxValue - minValue).takeIf { it > 0 } ?: 40f
 
-    // Adiciona padding vertical para melhor visualização
     val paddingTop = size.height * 0.1f
     val paddingBottom = size.height * 0.1f
     val chartHeight = size.height - paddingTop - paddingBottom
 
     val stepX = size.width / (data.size - 1).coerceAtLeast(1)
 
-    // Pontos do gráfico
     val points = data.mapIndexed { index, bpm ->
         val x = index * stepX
         val normalizedY = (bpm - minValue) / range
@@ -169,7 +161,6 @@ private fun DrawScope.drawHeartRateChart(data: List<Long>) {
         Offset(x, y)
     }
 
-    // Desenha área preenchida (gradiente)
     val path = Path().apply {
         moveTo(points.first().x, size.height)
         points.forEach { point -> lineTo(point.x, point.y) }
@@ -189,7 +180,6 @@ private fun DrawScope.drawHeartRateChart(data: List<Long>) {
 
     drawPath(path = path, brush = gradient)
 
-    // Desenha linha principal suavizada
     val smoothPath = createSmoothPath(points)
     drawPath(
         path = smoothPath,
@@ -201,7 +191,6 @@ private fun DrawScope.drawHeartRateChart(data: List<Long>) {
         )
     )
 
-    // Desenha pontos de dados
     points.forEachIndexed { index, point ->
         val isFirstOrLast = index == 0 || index == points.lastIndex
         val radius = if (isFirstOrLast) 3.dp.toPx() else 2.dp.toPx()
@@ -214,7 +203,6 @@ private fun DrawScope.drawHeartRateChart(data: List<Long>) {
         )
     }
 
-    // Linhas de grade sutis
     drawGridLines(minValue, maxValue, paddingTop, paddingBottom, chartHeight)
 }
 
@@ -228,7 +216,6 @@ private fun createSmoothPath(points: List<Offset>): Path {
         val currentPoint = points[i]
         val previousPoint = points[i - 1]
 
-        // Controle de suavização simples
         val controlPointX = previousPoint.x + (currentPoint.x - previousPoint.x) * 0.5f
 
         path.quadraticTo(

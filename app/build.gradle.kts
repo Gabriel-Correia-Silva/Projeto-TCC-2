@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.firebase.storage.ktx)
+    implementation(libs.androidx.lifecycle.service)
     ksp(libs.hilt.compiler) // ESSENCIAL: 'ksp' para o compilador do Hilt
     implementation(libs.hilt.navigation.compose)
 

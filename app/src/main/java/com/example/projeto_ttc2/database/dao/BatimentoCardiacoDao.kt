@@ -14,7 +14,6 @@ interface BatimentoCardiacoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(batimentos: List<BatimentoCardiaco>)
 
-    // As consultas ainda podem usar 'Instant' porque o TypeConverter faz a conversão
     @Query("SELECT * FROM batimentos_cardiacos WHERE timestamp BETWEEN :inicio AND :fim ORDER BY timestamp ASC")
     fun getBatimentosDoPeriodo(inicio: Instant, fim: Instant): Flow<List<BatimentoCardiaco>>
 

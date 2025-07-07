@@ -20,7 +20,7 @@ import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 @Composable
 fun StepsCard(
     steps: Int,
-    goal: Long,
+    goal: Int,
     distanceKm: Double,
     onClick: () -> Unit,
     cardColor: Color = TealGreen

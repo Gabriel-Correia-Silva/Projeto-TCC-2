@@ -26,7 +26,6 @@ fun UserCard(
     heartRate: Long,
     sleep: String,
     activity: Int,
-    // --- ALTERAÇÃO AQUI ---
     onDetailsClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -78,13 +77,12 @@ fun UserCard(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // --- BOTÃO ATUALIZADO ---
                     Button(
-                        onClick = onDetailsClick, // Ação atualizada
+                        onClick = onDetailsClick,
                         modifier = Modifier.align(Alignment.End),
                         colors = ButtonDefaults.buttonColors(containerColor = TealGreen)
                     ) {
-                        Text("Ver Detalhes") // Texto atualizado
+                        Text("Ver Detalhes")
                     }
                 }
             }

@@ -40,7 +40,6 @@ class FeedbackRepository @Inject constructor(
     fun getUnreadFeedbackCount(userId: String): Flow<Int> = callbackFlow {
         val listener = feedbackCollection
             .whereEqualTo("recipientId", userId)
-            // CORREÇÃO: A consulta agora procura por 'read' em vez de 'isRead'.
             .whereEqualTo("read", false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -56,7 +55,6 @@ class FeedbackRepository @Inject constructor(
         val batch = firestore.batch()
         feedbackIds.forEach { id ->
             val docRef = feedbackCollection.document(id)
-            // CORREÇÃO: A atualização agora modifica o campo 'read'.
             batch.update(docRef, "read", true)
         }
         batch.commit().await()

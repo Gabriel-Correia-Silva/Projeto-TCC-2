@@ -31,7 +31,6 @@ class HealthConnectViewModel @Inject constructor(
     val permissions: Set<String> = HealthConnectManager.REQUIRED_PERMISSIONS
     val uiState = mutableStateOf<UiState>(UiState.Uninitialized)
 
-    // A inicialização agora apenas prepara o manager.
     fun initialLoad(context: Context) {
         if (HealthConnectClient.getSdkStatus(context.applicationContext) != HealthConnectClient.SDK_AVAILABLE) {
             uiState.value = UiState.Error("Health Connect não está disponível ou precisa ser atualizado")
@@ -41,11 +40,8 @@ class HealthConnectViewModel @Inject constructor(
         isReady = true
     }
 
-    // A função agora é 'suspend' e faz a verificação diretamente.
     suspend fun hasAllPermissions(): Boolean {
         if (!isReady) {
-            // Se não estiver pronto, espera um pouco para dar tempo de inicializar.
-            // Numa app real, poderia usar-se um Flow ou um mecanismo mais reativo.
             kotlinx.coroutines.delay(500)
         }
         return healthConnectManager.getGrantedPermissions().containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)

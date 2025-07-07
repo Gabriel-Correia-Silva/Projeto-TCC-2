@@ -33,7 +33,7 @@ class UserRepositoryImpl @Inject constructor(
             val document = usersCollection.document(id).get().await()
             if (document.exists()) {
                 val firestoreUser = document.toObject(User::class.java)
-                user = firestoreUser?.copy(id = document.id) // Garante que o ID está correto
+                user = firestoreUser?.copy(id = document.id)
                 user?.let { userDao.upsert(it) }
             }
         }
@@ -62,7 +62,6 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun getSupervisedUsers(supervisorId: String): Flow<List<User>> = callbackFlow {
-        // --- LÓGICA DE CONSULTA ATUALIZADA ---
         val listener = usersCollection.whereArrayContains("supervisorIds", supervisorId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -73,7 +72,6 @@ class UserRepositoryImpl @Inject constructor(
 
                 if (snapshot != null) {
                     val users = snapshot.documents.mapNotNull { document ->
-                        // Manter o mapeamento manual para evitar outros erros
                         document.toObject(User::class.java)?.copy(id = document.id)
                     }
                     Log.d("Firestore", "Supervisionados carregados: ${users.size} usuários encontrados.")

@@ -51,13 +51,12 @@ class HeartRateRepository @Inject constructor(
     suspend fun syncData() {
         val client = healthConnectManager.client
         val endTime = Instant.now()
-        // Buscando dados das últimas 24 horas para garantir que algo seja pego
+
         val startTime = endTime.minus(24, ChronoUnit.HOURS)
         val request = ReadRecordsRequest(HeartRateRecord::class, TimeRangeFilter.between(startTime, endTime))
 
         try {
             val response = client.readRecords(request)
-            // --- LOG DE DIAGNÓSTICO ADICIONADO ---
             Log.d(TAG, "Health Connect retornou ${response.records.size} registros de frequência cardíaca.")
 
             val userId = firebaseAuth.currentUser?.uid ?: ""

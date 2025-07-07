@@ -13,5 +13,5 @@ data class User(
     val supervisorIds: List<String>? = null,
     val profileImageUrl: String? = null,
     val gender: String? = null,
-    val birthDate: String? = null // Alterado de LocalDate? para String?
+    val birthDate: String? = null
 )

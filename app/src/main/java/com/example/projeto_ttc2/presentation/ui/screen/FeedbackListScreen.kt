@@ -42,14 +42,10 @@ fun FeedbackListScreen(
 ) {
     val feedbackList by viewModel.feedbackList.collectAsStateWithLifecycle()
 
-    // CORREÇÃO:
-    // O LaunchedEffect agora "observa" a feedbackList.
-    // Ele será executado sempre que a lista for atualizada a partir do Firestore.
+
     LaunchedEffect(feedbackList) {
-        // Verificamos se há algum item não lido na lista que acabámos de receber.
         val hasUnreadItems = feedbackList.any { !it.read }
         if (hasUnreadItems) {
-            // Se houver, chamamos a função para os marcar como lidos.
             viewModel.markAllAsRead()
         }
     }
@@ -73,7 +69,6 @@ fun FeedbackListScreen(
                     timestamp = feedback.timestamp?.let {
                         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(it)
                     } ?: "",
-                    // O nome do campo foi corrigido aqui para corresponder ao modelo de dados.
                     isUnread = !feedback.read
                 )
             }

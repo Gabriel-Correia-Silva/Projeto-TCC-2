@@ -34,7 +34,7 @@ class MyApplication : Application(), Configuration.Provider {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "DataSyncWork",
-            ExistingPeriodicWorkPolicy.KEEP, // Mantém o trabalho existente se já estiver agendado
+            ExistingPeriodicWorkPolicy.KEEP, 
             workRequest
         )
     }

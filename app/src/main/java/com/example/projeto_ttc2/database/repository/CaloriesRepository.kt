@@ -19,7 +19,6 @@ import javax.inject.Singleton
 class CaloriesRepository @Inject constructor(
     private val caloriasDao: CaloriasDao,
     private val healthConnectManager: HealthConnectManager,
-    // CORREÇÃO: Adicionando as dependências ao construtor
     private val firebaseAuth: FirebaseAuth,
     private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {

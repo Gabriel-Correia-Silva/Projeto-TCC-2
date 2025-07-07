@@ -1,5 +1,8 @@
 package com.example.projeto_ttc2.presentation.viewmodel
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
@@ -25,11 +28,35 @@ class DashboardViewModel @Inject constructor(
     private val caloriesRepository: CaloriesRepository,
     private val oxygenSaturationRepository: OxygenSaturationRepository,
     private val feedbackRepository: FeedbackRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
+
+    val heartRateThreshold: StateFlow<Long> = userPreferencesRepository.heartRateThreshold
+    val stepGoal: StateFlow<Long> = userPreferencesRepository.stepGoal
+
+    val oxygenationHistory: StateFlow<List<Double>> = oxygenSaturationRepository.getLatestSevenOxygenationReadings()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _showHeartRateAlert = MutableStateFlow(false)
+    val showHeartRateAlert: StateFlow<Boolean> = _showHeartRateAlert.asStateFlow()
+
     val latestHeartRate: StateFlow<Long> = heartRateRepository.getLatestHeartRate()
+        .onEach { rate ->
+            if (rate > heartRateThreshold.value) {
+                _showHeartRateAlert.value = true
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    fun setHeartRateThreshold(threshold: Long) {
+        userPreferencesRepository.setHeartRateThreshold(threshold)
+    }
+
+    fun setStepGoal(goal: Long) {
+        userPreferencesRepository.setStepGoal(goal)
+    }
 
     val todayHeartRateData: StateFlow<List<Long>> = heartRateRepository.getTodayHeartRateData()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -59,6 +86,28 @@ class DashboardViewModel @Inject constructor(
         authRepository.getCurrentUserFlow().flatMapLatest { user ->
             feedbackRepository.getUnreadFeedbackCount(user?.uid ?: "")
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun dismissHeartRateAlert() {
+        _showHeartRateAlert.value = false
+    }
+
+    fun triggerEmergencyActions(context: Context, emergencyContact: String?) {
+        // TODO: Implementar notificação para o médico (ex: via Push com Firebase)
+        // notifyDoctorAboutHeartRatePeak()
+
+        emergencyContact?.let { phone ->
+            val callIntent = Intent(Intent.ACTION_CALL).apply {
+                data = Uri.parse("tel:$phone")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                context.startActivity(callIntent)
+            } catch (e: SecurityException) {
+                // Lidar com o caso de a permissão CALL_PHONE não ter sido concedida
+            }
+        }
+        dismissHeartRateAlert()
+    }
 
     fun setPeriod(period: Period) {
         _selectedPeriod.value = period
@@ -101,17 +150,6 @@ class DashboardViewModel @Inject constructor(
 
     val todaySteps: StateFlow<Long> = stepsRepository.getTodayStepsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-
-    private val _stepsForDate = MutableStateFlow<Passos?>(null)
-    val stepsForDate: StateFlow<Passos?> = _stepsForDate.asStateFlow()
-
-    fun loadStepsForDate(date: LocalDate) {
-        viewModelScope.launch {
-            stepsRepository.getStepsForDate(date).collect {
-                _stepsForDate.value = it
-            }
-        }
-    }
 
     val latestSleepSession: StateFlow<Sono?> = sleepRepository.getLatestSleepSession()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)

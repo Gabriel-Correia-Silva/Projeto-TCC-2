@@ -18,4 +18,7 @@ interface OxigenacaoSanguineaDao {
 
     @Query("DELETE FROM oxigenacao_sanguinea WHERE timestamp < :timestamp")
     suspend fun deleteOldData(timestamp: Long)
+
+    @Query("SELECT * FROM oxigenacao_sanguinea ORDER BY timestamp DESC LIMIT 7")
+    fun getUltimasSeteOxigenacoes(): Flow<List<OxigenacaoSanguinea>>
 }

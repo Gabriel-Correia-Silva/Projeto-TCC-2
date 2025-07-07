@@ -17,7 +17,6 @@ import javax.inject.Singleton
 class SleepRepository @Inject constructor(
     private val sonoDao: SonoDao,
     private val healthConnectManager: HealthConnectManager,
-    // CORREÇÃO: Adicionando as dependências ao construtor
     private val firebaseAuth: FirebaseAuth,
     private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {

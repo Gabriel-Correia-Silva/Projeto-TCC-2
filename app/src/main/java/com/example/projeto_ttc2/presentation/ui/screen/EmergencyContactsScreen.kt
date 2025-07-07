@@ -46,7 +46,6 @@ fun EmergencyContactsScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Header com botão de adicionar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -85,7 +84,6 @@ fun EmergencyContactsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Mensagens de feedback
         uiState.errorMessage?.let { message ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -114,7 +112,6 @@ fun EmergencyContactsScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Lista de contatos
         if (contacts.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -185,7 +182,6 @@ fun EmergencyContactCard(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Checkbox para seleção
             Checkbox(
                 checked = isSelected,
                 onCheckedChange = { onSelect() },
@@ -196,7 +192,6 @@ fun EmergencyContactCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Informações do Contato
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = contact.name,
@@ -217,7 +212,6 @@ fun EmergencyContactCard(
                 )
             }
 
-            // Botão de deletar
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(
                     Icons.Default.Delete,

@@ -19,25 +19,22 @@ class EmergencyContactRepository @Inject constructor(
 
     private fun contactsCollection() = firestore.collection("emergency_contacts")
 
-    // Modifique o Flow para sincronizar no início da coleta
     val allContacts: Flow<List<EmergencyContact>> = emergencyContactDao.getAllContacts()
         .onStart { syncContacts() }
 
-    // Função para sincronizar contatos do Firestore para o Room
     suspend fun syncContacts() {
-        val userId = auth.currentUser?.uid ?: return // Sai se não houver usuário logado
+        val userId = auth.currentUser?.uid ?: return
         try {
             val snapshot = contactsCollection().whereEqualTo("userId", userId).get().await()
             val firestoreContacts = snapshot.documents.mapNotNull { document ->
                 document.toObject(EmergencyContact::class.java)?.copy(firestoreId = document.id)
             }
-            // Insere ou atualiza os contatos no banco de dados local
-            // O OnConflictStrategy.REPLACE garante que os contatos existentes sejam atualizados
+
             firestoreContacts.forEach { contact ->
                 emergencyContactDao.insertContact(contact)
             }
         } catch (e: Exception) {
-            // Lide com exceções de rede ou outras aqui, se necessário
+            e.printStackTrace()
         }
     }
 

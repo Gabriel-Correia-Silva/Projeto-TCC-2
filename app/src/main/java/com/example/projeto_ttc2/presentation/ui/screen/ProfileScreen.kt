@@ -38,13 +38,13 @@ import java.time.format.DateTimeParseException
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    profileState: ProfileState, // Recebe o estado do perfil
+    profileState: ProfileState,
     onSaveProfile: (String, String, LocalDate?, Uri?) -> Unit,
-    onClearState: () -> Unit, // Para limpar mensagens após exibição
+    onClearState: () -> Unit,
     userId: String,
     userRole: UserRole?
 ) {
-    // Extrai os dados do usuário do estado de sucesso
+
     val user = if (profileState is ProfileState.Success) profileState.user else null
 
     var editedFullName by remember(user?.name) { mutableStateOf(user?.name ?: "") }
@@ -65,7 +65,7 @@ fun ProfileScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Efeitos para exibir mensagens de sucesso ou erro
+
     LaunchedEffect(profileState) {
         if (profileState is ProfileState.UpdateSuccess) {
             snackbarHostState.showSnackbar("Perfil salvo com sucesso!")
@@ -88,8 +88,7 @@ fun ProfileScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // ... (O restante da UI do perfil, como a imagem e os campos de texto)
-            // A única mudança significativa é no botão Salvar:
+
 
             val isLoading = profileState is ProfileState.Loading
 
@@ -100,7 +99,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading // Desabilita o botão durante o carregamento
+                enabled = !isLoading
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(

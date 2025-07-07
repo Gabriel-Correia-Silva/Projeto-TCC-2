@@ -12,8 +12,8 @@ interface PassosDao {
     suspend fun upsert(passos: Passos)
 
     @Query("SELECT * FROM passos WHERE data = :data")
-    fun getPassosPorData(data: String): Flow<Passos?> // Alterado de LocalDate para String
+    fun getPassosPorData(data: String): Flow<Passos?>
 
     @Query("SELECT * FROM passos WHERE data BETWEEN :startDate AND :endDate ORDER BY data ASC")
-    fun getStepsInPeriod(startDate: String, endDate: String): Flow<List<Passos>> // Alterado de LocalDate para String
+    fun getStepsInPeriod(startDate: String, endDate: String): Flow<List<Passos>>
 }

@@ -16,11 +16,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// Data class para resumir os dados de saúde de um usuário para o supervisor
 data class HealthSummary(
     val steps: Long = 0,
     val heartRate: Long = 0,
-    val sleep: Long = 0, // Duração em minutos
+    val sleep: Long = 0,
     val calories: Double = 0.0
 )
 
@@ -31,26 +30,26 @@ class SupervisorViewModel @Inject constructor(
     private val healthDataRepository: FirebaseHealthDataRepository
 ) : ViewModel() {
 
-    // Fluxo para armazenar o ID do supervisor logado
+
     private val _supervisorId = MutableStateFlow<String?>(null)
 
-    // Fluxo que busca e mantém a lista de usuários supervisionados
+
     val supervisedUsers: StateFlow<List<User>> = _supervisorId.flatMapLatest { id ->
-        // `flatMapLatest` garante que, se o ID do supervisor mudar, uma nova busca será feita
+
         userRepository.getSupervisedUsers(id ?: "")
     }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Fluxo que mapeia o ID de cada usuário aos seus dados de saúde resumidos
+
     val healthData: StateFlow<Map<String, HealthSummary>> = supervisedUsers.flatMapLatest { users ->
         val userHealthFlows = users.map { user ->
-            // Para cada usuário, combina os diferentes fluxos de dados de saúde
+
             combine(
                 healthDataRepository.getUserStepsData(user.id),
                 healthDataRepository.getUserHeartRateData(user.id),
                 healthDataRepository.getUserSleepData(user.id),
                 healthDataRepository.getUserCaloriesData(user.id)
             ) { stepsData, heartRateData, sleepData, caloriesData ->
-                // Cria um resumo para o usuário
+
                 user.id to HealthSummary(
                     steps = stepsData.firstOrNull()?.contagem ?: 0L,
                     heartRate = heartRateData.firstOrNull()?.bpm ?: 0L,
@@ -60,7 +59,7 @@ class SupervisorViewModel @Inject constructor(
             }
         }
 
-        // Combina os resultados de todos os usuários em um único mapa
+
         combine(userHealthFlows) { summaries ->
             summaries.toMap()
         }
@@ -68,7 +67,6 @@ class SupervisorViewModel @Inject constructor(
 
 
     init {
-        // Ao inicializar o ViewModel, busca o ID do usuário atualmente logado
         viewModelScope.launch {
             _supervisorId.value = authRepository.getCurrentUser()?.uid
         }

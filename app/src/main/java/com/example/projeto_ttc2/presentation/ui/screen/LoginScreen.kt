@@ -16,20 +16,20 @@ import com.example.projeto_ttc2.presentation.state.AuthState
 
 @Composable
 fun LoginScreen(
-    authState: AuthState, // Recebe o estado de autenticação
+    authState: AuthState,
     onSignInRequested: () -> Unit,
-    onErrorShown: () -> Unit // Função para limpar o erro depois de exibido
+    onErrorShown: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Exibe a mensagem de erro quando o estado for de erro
+
     LaunchedEffect(authState) {
         if (authState is AuthState.Error) {
             snackbarHostState.showSnackbar(
                 message = authState.message,
                 duration = SnackbarDuration.Short
             )
-            onErrorShown() // Informa ao ViewModel que o erro foi exibido
+            onErrorShown()
         }
     }
 
@@ -72,7 +72,7 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(48.dp))
 
-                // Desabilita o botão e mostra o indicador de progresso durante o carregamento
+
                 val isLoading = authState is AuthState.Loading
 
                 Button(
@@ -80,7 +80,7 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = !isLoading // Desabilita o botão durante o carregamento
+                    enabled = !isLoading
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(

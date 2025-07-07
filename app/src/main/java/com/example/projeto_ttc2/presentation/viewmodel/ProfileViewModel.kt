@@ -60,7 +60,7 @@ class ProfileViewModel @Inject constructor(
     fun saveProfile(
         fullName: String,
         gender: String,
-        birthDate: LocalDate?, // Recebe LocalDate da UI
+        birthDate: LocalDate?,
         imageUri: Uri?
     ) {
         viewModelScope.launch {
@@ -75,7 +75,6 @@ class ProfileViewModel @Inject constructor(
                 val updates = mutableMapOf<String, Any?>()
                 updates["name"] = fullName
                 updates["gender"] = gender
-                // Converte LocalDate para String no formato padrão YYYY-MM-DD
                 updates["birthDate"] = birthDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)
 
                 if (imageUri != null) {

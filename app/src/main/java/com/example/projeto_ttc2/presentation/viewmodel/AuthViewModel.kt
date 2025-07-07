@@ -67,9 +67,9 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    // Função para verificação de registro (usada pela SplashScreen)
+
     suspend fun checkUserRegistration(userId: String) {
-        // Evita recarregar se já estiver autenticado com role válido
+
         if (_authState.value is AuthState.Authenticated && _userRole.value !in listOf(null, UserRole.Unknown)) {
             return
         }
@@ -77,8 +77,7 @@ class AuthViewModel @Inject constructor(
         fetchUserRole(userId)
     }
 
-    // Função de bloqueio para a lógica síncrona da nova SplashScreen
-    suspend fun checkUserRegistrationBlocking(userId: String): AuthState {
+        suspend fun checkUserRegistrationBlocking(userId: String): AuthState {
         val role = repository.getUserRole(userId)
         _userRole.value = when (role) {
             "supervisor" -> UserRole.Supervisor

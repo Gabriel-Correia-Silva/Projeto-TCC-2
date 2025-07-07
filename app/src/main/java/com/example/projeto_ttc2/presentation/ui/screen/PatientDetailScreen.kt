@@ -52,7 +52,6 @@ fun PatientDetailScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // --- CABEÇALHO DO PACIENTE ---
         patient?.let { user ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -90,7 +89,6 @@ fun PatientDetailScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- ABAS DE NAVEGAÇÃO ---
         TabRow(
             selectedTabIndex = selectedTabIndex,
             containerColor = Color.Transparent,
@@ -106,7 +104,6 @@ fun PatientDetailScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- CONTEÚDO DINÂMICO DAS ABAS ---
         when (selectedTabIndex) {
             0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData)
             1 -> StepsTab(stepsData)
@@ -116,7 +113,6 @@ fun PatientDetailScreen(
     }
 }
 
-// --- ABA DE VISÃO GERAL ---
 @Composable
 fun OverviewTab(
     viewModel: PatientDetailViewModel,
@@ -154,14 +150,12 @@ fun OverviewTab(
     }
 }
 
-// --- ABA DE PASSOS ---
 @Composable
 fun StepsTab(stepsData: List<Passos>) {
     Text("Detalhes de Passos")
     Text("Total de passos hoje: ${stepsData.sumOf { it.contagem }}")
 }
 
-// --- ABA DE FREQUÊNCIA CARDÍACA ---
 @Composable
 fun HeartRateTab(heartRateData: List<BatimentoCardiaco>) {
     if (heartRateData.isNotEmpty()) {
@@ -169,14 +163,11 @@ fun HeartRateTab(heartRateData: List<BatimentoCardiaco>) {
         val maxBpm = heartRateData.maxOfOrNull { it.bpm } ?: "--"
         Text("Variação de BPM hoje: $minBpm - $maxBpm bpm")
         Spacer(modifier = Modifier.height(16.dp))
-        // Supondo que HeartRateBarChart exista
-        // HeartRateBarChart(data = heartRateData, modifier = Modifier.fillMaxWidth().height(250.dp))
     } else {
         EmptyState("Sem dados de frequência cardíaca para exibir.")
     }
 }
 
-// --- ABA DE SONO ---
 @Composable
 fun SleepTab(sleepData: List<Sono>) {
     val lastSleep = sleepData.firstOrNull()
@@ -191,7 +182,6 @@ fun SleepTab(sleepData: List<Sono>) {
     }
 }
 
-// --- COMPONENTES AUXILIARES ---
 @Composable
 fun SummaryCard(
     icon: ImageVector,

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 interface EmergencyContactDao {
 
     @Query("SELECT * FROM emergency_contacts ORDER BY name ASC")
-    fun getAllContacts(): Flow<List<EmergencyContact>> // Use Flow para atualizações automáticas na UI
+    fun getAllContacts(): Flow<List<EmergencyContact>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContact(contact: EmergencyContact)

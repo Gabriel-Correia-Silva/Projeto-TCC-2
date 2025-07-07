@@ -1,9 +1,24 @@
 package com.example.projeto_ttc2.presentation.ui.screen
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -39,10 +54,13 @@ fun SettingsScreen(navController: NavController) {
         SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") {
             navController.navigate("emergency_contacts_screen")
         }
-        SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
-        SettingsItem(icon = Icons.Default.Sensors, text = "Sensores") { /* TODO */ }
-        SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }
-        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO */ }
+
+        SettingsItem(icon = Icons.Default.Sensors, text = "Metas e Alertas") {
+            navController.navigate("sensors_settings_screen")
+        }
+        //SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
+        //SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }
+        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO: Implementar logout */ }
     }
 }
 

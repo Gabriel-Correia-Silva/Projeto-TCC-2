@@ -26,6 +26,11 @@ class OxygenSaturationRepository @Inject constructor(
     fun getLatestOxygenSaturation(): Flow<Double> {
         return oxigenacaoSanguineaDao.getUltimaOxigenacao().map { it?.spo2 ?: 0.0 }
     }
+    fun getLatestSevenOxygenationReadings(): Flow<List<Double>> {
+        return oxigenacaoSanguineaDao.getUltimasSeteOxigenacoes().map { records ->
+            records.map { it.spo2 }
+        }
+    }
 
     suspend fun syncData() {
         val client = healthConnectManager.client

@@ -134,7 +134,6 @@ fun HeartRateBarChart(
     modifier: Modifier = Modifier
 ) {
     val dataByHour = data.groupBy {
-        // CORREÇÃO: Converte o Long de volta para um Instant.
         val instant = Instant.ofEpochMilli(it.timestamp)
         LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).hour
     }.mapValues { entry ->

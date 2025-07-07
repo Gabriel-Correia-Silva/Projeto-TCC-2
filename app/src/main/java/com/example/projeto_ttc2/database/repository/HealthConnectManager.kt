@@ -20,11 +20,9 @@ class HealthConnectManager @Inject constructor(context: Context) {
         }
     }
 
-    fun getGrantedPermissions(): Set<String> {
+    suspend fun getGrantedPermissions(): Set<String> {
         return try {
-            // Retorna um conjunto vazio se o cliente não estiver inicializado
-            // ou se houver algum erro ao obter as permissões
-            emptySet()
+            client.permissionController.getGrantedPermissions()
         } catch (e: Exception) {
             emptySet()
         }
@@ -36,7 +34,8 @@ class HealthConnectManager @Inject constructor(context: Context) {
             HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getReadPermission(SleepSessionRecord::class),
             HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
-            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)
+            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class) 
         )
     }
 }

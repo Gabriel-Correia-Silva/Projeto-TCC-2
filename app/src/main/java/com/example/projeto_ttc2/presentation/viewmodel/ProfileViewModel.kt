@@ -48,6 +48,14 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
+    fun clearState() {
+        val currentState = _profileState.value
+        if (currentState is ProfileState.Success) {
+            _profileState.value = ProfileState.Success(currentState.user)
+        } else {
+            _profileState.value = ProfileState.Initial
+        }
+    }
 
     fun saveProfile(
         fullName: String,

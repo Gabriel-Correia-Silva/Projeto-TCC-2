@@ -16,16 +16,21 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 import kotlin.math.sin
 
 @Composable
 fun HeartRateCard(
     bpm: Long,
     heartRateData: List<Long> = emptyList(),
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Adicionando o parâmetro de cor
+    cardColor: Color = TealGreen
 ) {
     DashboardCard(
-        onClick = onClick // Use o onClick do DashboardCard ao invés do Modifier.clickable
+        onClick = onClick,
+        // Repassando a cor
+        cardColor = cardColor
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color.White)

@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import java.time.Instant
-import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,9 +16,6 @@ import javax.inject.Singleton
 class FirebaseHealthDataRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : FirebaseHealthDataRepository {
-
-    // As funções de sincronização (sync) permanecem como estavam,
-    // pois a lógica de escrita de dados já está correta.
 
     override suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>) {
         if (userId.isBlank()) return
@@ -65,10 +61,17 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
         batch.commit().await()
     }
 
-    /**
-     * Função auxiliar para converter um Map (objeto) do Firestore em um Timestamp do Firebase.
-     * Isso é necessário para lidar com formatos de data mais antigos no banco de dados.
-     */
+    override suspend fun syncOxygenSaturationData(userId: String, oxygenData: List<OxigenacaoSanguinea>) {
+        if (userId.isBlank()) return
+        val collection = firestore.collection("users").document(userId).collection("oxygen_saturation")
+        val batch = firestore.batch()
+        for (data in oxygenData) {
+            val docRef = collection.document(data.timestamp.toString())
+            batch.set(docRef, data)
+        }
+        batch.commit().await()
+    }
+
     private fun getTimestampFromMap(map: Map<String, Any>?): Timestamp? {
         if (map == null) return null
         val seconds = map["epochSecond"] as? Long ?: return null
@@ -76,13 +79,11 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
         return Timestamp(seconds, nanos)
     }
 
-    // --- MÉTODOS DE BUSCA ATUALIZADOS ---
-
     override fun getUserHeartRateData(userId: String): Flow<List<BatimentoCardiaco>> = flow {
         if (userId.isNotBlank()) {
             val snapshot = firestore.collection("users").document(userId).collection("heart_rate")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(1) // Busca apenas o registro mais recente
+                .limit(1)
                 .get()
                 .await()
             val heartRateList = snapshot.documents.mapNotNull { document ->
@@ -134,7 +135,7 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
         if (userId.isNotBlank()) {
             val snapshot = firestore.collection("users").document(userId).collection("steps")
                 .orderBy("data", Query.Direction.DESCENDING)
-                .limit(1) // Busca apenas o registro mais recente
+                .limit(1)
                 .get()
                 .await()
             val passosList = snapshot.documents.mapNotNull { document ->
@@ -172,7 +173,7 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
         if (userId.isNotBlank()) {
             val snapshot = firestore.collection("users").document(userId).collection("sleep")
                 .orderBy("endTime", Query.Direction.DESCENDING)
-                .limit(1) // Busca apenas o registro mais recente
+                .limit(1)
                 .get()
                 .await()
             val sleepList = snapshot.documents.mapNotNull { document ->
@@ -205,11 +206,10 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
 
     override fun getUserCaloriesData(userId: String): Flow<List<Calorias>> = flow {
         if (userId.isNotBlank()) {
-            // Consulta ajustada para buscar o registro de calorias totais mais recente
             val snapshot = firestore.collection("users").document(userId).collection("calories")
-                .whereEqualTo("tipo", "TOTAL") // Filtra apenas pelo tipo TOTAL
+                .whereEqualTo("tipo", "TOTAL")
                 .orderBy("endTime", Query.Direction.DESCENDING)
-                .limit(1) // Pega apenas o mais recente
+                .limit(1)
                 .get()
                 .await()
             val caloriesList = snapshot.documents.mapNotNull { document ->

@@ -1,19 +1,28 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projeto_ttc2.database.entities.Sono
+import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SleepCard(sleepSession: Sono?, onClick: () -> Unit) {
+fun SleepCard(
+    sleepSession: Sono?,
+    onClick: () -> Unit,
+    cardColor: Color = TealGreen
+) {
     fun formatDuration(minutes: Long?): String {
         if (minutes == null || minutes <= 0) return "--"
         val hours = minutes / 60
@@ -23,8 +32,19 @@ fun SleepCard(sleepSession: Sono?, onClick: () -> Unit) {
 
     val totalDurationText = formatDuration(sleepSession?.durationMinutes)
 
-    DashboardCard(onClick = onClick) {
-        Text("Sono", color = Color.White, fontWeight = FontWeight.Bold)
+    DashboardCard(
+        onClick = onClick,
+        cardColor = cardColor
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Bedtime,
+                contentDescription = "Ícone de Sono",
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Sono", color = Color.White, fontWeight = FontWeight.Bold)
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
@@ -36,7 +56,6 @@ fun SleepCard(sleepSession: Sono?, onClick: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Detalhes das fases do sono
         SleepPhaseRow("Acordado", formatDuration(sleepSession?.awakeDurationMinutes))
         SleepPhaseRow("Sono REM", formatDuration(sleepSession?.remSleepDurationMinutes))
         SleepPhaseRow("Sono Leve", formatDuration(sleepSession?.lightSleepDurationMinutes))

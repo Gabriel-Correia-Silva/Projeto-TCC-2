@@ -12,13 +12,13 @@ class SyncRepository @Inject constructor(
     private val heartRateRepository: HeartRateRepository,
     private val stepsRepository: StepsRepository,
     private val sleepRepository: SleepRepository,
-    private val caloriesRepository: CaloriesRepository
+    private val caloriesRepository: CaloriesRepository,
+    private val oxygenSaturationRepository: OxygenSaturationRepository
 ) {
     private val TAG = "SyncRepository"
 
     suspend fun syncAllData() {
         try {
-            // Adicionando logs detalhados para cada etapa da sincronização
             Log.d(TAG, "--- INICIANDO SINCRONIZAÇÃO COMPLETA ---")
 
             coroutineScope {
@@ -42,15 +42,18 @@ class SyncRepository @Inject constructor(
                     caloriesRepository.syncData()
                     Log.i(TAG, "Calorias OK.")
                 }
+                val oxygenJob = async {
+                    Log.d(TAG, "Sincronizando Oxigenação...")
+                    oxygenSaturationRepository.syncData()
+                    Log.i(TAG, "Oxigenação OK.")
+                }
 
-                // Aguarda a conclusão de todas as tarefas de sincronização
-                awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob)
+                awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob, oxygenJob)
 
                 Log.d(TAG, "--- SINCRONIZAÇÃO COMPLETA CONCLUÍDA COM SUCESSO ---")
             }
         } catch (e: Exception) {
             Log.e(TAG, "--- FALHA GERAL NA SINCRONIZAÇÃO ---", e)
-            // Propaga a exceção para que o chamador (Worker ou ViewModel) possa lidar com ela.
             throw e
         }
     }

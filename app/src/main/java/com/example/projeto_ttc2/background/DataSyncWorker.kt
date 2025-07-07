@@ -11,6 +11,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.example.projeto_ttc2.R
+import com.example.projeto_ttc2.database.repository.HealthConnectManager
 import com.example.projeto_ttc2.database.repository.SyncRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -27,6 +28,19 @@ class DataSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         Log.d("DataSyncWorker", "Iniciando sincronização de dados em segundo plano.")
+
+        // Inject or get an instance of HealthConnectManager
+        // For simplicity, this example assumes you can get it.
+        // You might need to adjust your dependency injection for the worker.
+        val healthConnectManager = HealthConnectManager(appContext)
+        healthConnectManager.initialize(appContext)
+        val hasPermissions = healthConnectManager.getGrantedPermissions().containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
+
+        if (!hasPermissions) {
+            Log.w("DataSyncWorker", "Permissões não concedidas. Adiando a sincronização.")
+            return Result.failure() // or Result.retry()
+        }
+
         try {
             setForeground(createForegroundInfo())
             syncRepository.syncAllData()

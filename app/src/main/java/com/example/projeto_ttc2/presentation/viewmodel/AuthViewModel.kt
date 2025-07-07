@@ -25,19 +25,8 @@ class AuthViewModel @Inject constructor(
     private val _userRole = MutableStateFlow<UserRole?>(null)
     val userRole: StateFlow<UserRole?> = _userRole
 
-    init {
-        // Não chama checkCurrentUser aqui para evitar loops
-        // A verificação será feita apenas quando necessário
-    }
-
-    private fun checkCurrentUser() {
-        viewModelScope.launch {
-            val currentUser = repository.getCurrentUser()
-            if (currentUser != null) {
-                _authState.value = AuthState.Loading
-                fetchUserRole(currentUser.uid)
-            }
-        }
+    fun getCurrentUser(): FirebaseUser? {
+        return repository.getCurrentUser()
     }
 
     fun signInWithGoogle(idToken: String) {
@@ -59,27 +48,49 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun fetchUserRole(userId: String) {
-        try {
-            val role = repository.getUserRole(userId)
-            _userRole.value = when (role) {
-                "supervisor" -> UserRole.Supervisor
-                "supervised" -> UserRole.Supervised
-                else -> UserRole.Unknown
-            }
+        val role = repository.getUserRole(userId)
+        _userRole.value = when (role) {
+            "supervisor" -> UserRole.Supervisor
+            "supervised" -> UserRole.Supervised
+            else -> UserRole.Unknown
+        }
 
-            // Se o role for Unknown, isso significa que o usuário não completou o registro
-            if (_userRole.value == UserRole.Unknown) {
-                val currentUser = repository.getCurrentUser()
-                if (currentUser != null) {
-                    _authState.value = AuthState.NeedsRegistration(currentUser)
-                } else {
-                    _authState.value = AuthState.Error("Usuário não encontrado")
-                }
+        if (_userRole.value == UserRole.Unknown) {
+            val currentUser = repository.getCurrentUser()
+            if (currentUser != null) {
+                _authState.value = AuthState.NeedsRegistration(currentUser)
             } else {
-                _authState.value = AuthState.Authenticated
+                _authState.value = AuthState.Error("Usuário não encontrado")
             }
-        } catch (e: Exception) {
-            _authState.value = AuthState.Error("Erro ao verificar role do usuário: ${e.message}")
+        } else {
+            _authState.value = AuthState.Authenticated
+        }
+    }
+
+    // Função para verificação de registro (usada pela SplashScreen)
+    suspend fun checkUserRegistration(userId: String) {
+        // Evita recarregar se já estiver autenticado com role válido
+        if (_authState.value is AuthState.Authenticated && _userRole.value !in listOf(null, UserRole.Unknown)) {
+            return
+        }
+        _authState.value = AuthState.Loading
+        fetchUserRole(userId)
+    }
+
+    // Função de bloqueio para a lógica síncrona da nova SplashScreen
+    suspend fun checkUserRegistrationBlocking(userId: String): AuthState {
+        val role = repository.getUserRole(userId)
+        _userRole.value = when (role) {
+            "supervisor" -> UserRole.Supervisor
+            "supervised" -> UserRole.Supervised
+            else -> UserRole.Unknown
+        }
+
+        return if (_userRole.value == UserRole.Unknown) {
+            val currentUser = repository.getCurrentUser()
+            if (currentUser != null) AuthState.NeedsRegistration(currentUser) else AuthState.Error("Usuário não encontrado")
+        } else {
+            AuthState.Authenticated
         }
     }
 
@@ -96,7 +107,6 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
-
         repository.signOut()
         _authState.value = AuthState.Idle
         _userRole.value = null
@@ -106,35 +116,9 @@ class AuthViewModel @Inject constructor(
         _authState.value = AuthState.Error(message)
     }
 
-    // Adicionando métodos que estão sendo referenciados no Navigation.kt
-    suspend fun checkUserRegistration(userId: String) {
-        // Evita recarregar se já estiver autenticado com role válido
-        if (_authState.value is AuthState.Authenticated && _userRole.value != UserRole.Unknown) {
-            return
-        }
-
-        _authState.value = AuthState.Loading
-        fetchUserRole(userId)
-    }
-
-    fun completeRegistration(userId: String, role: String) {
-        _authState.value = AuthState.Loading
-        viewModelScope.launch {
-            try {
-                val currentUser = repository.getCurrentUser()
-                if (currentUser != null) {
-                    repository.registerUser(
-                        userId = userId,
-                        name = currentUser.displayName ?: "",
-                        email = currentUser.email ?: "",
-                        role = role,
-                        supervisorIds = if (role == "supervised") listOf() else null
-                    )
-                    fetchUserRole(userId)
-                }
-            } catch (e: Exception) {
-                _authState.value = AuthState.Error(e.message ?: "Falha no registro")
-            }
+    fun clearErrorState() {
+        if (_authState.value is AuthState.Error) {
+            _authState.value = AuthState.Idle
         }
     }
 }

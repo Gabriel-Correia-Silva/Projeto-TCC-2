@@ -5,16 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
-import com.example.projeto_ttc2.database.repository.CaloriesRepository
-import com.example.projeto_ttc2.database.repository.HeartRateRepository
-import com.example.projeto_ttc2.database.repository.SleepRepository
-import com.example.projeto_ttc2.database.repository.StepsRepository
+import com.example.projeto_ttc2.database.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class Period {
@@ -25,8 +21,9 @@ enum class Period {
 class DashboardViewModel @Inject constructor(
     private val heartRateRepository: HeartRateRepository,
     private val stepsRepository: StepsRepository,
-    sleepRepository: SleepRepository,
-    caloriesRepository: CaloriesRepository
+    private val sleepRepository: SleepRepository,
+    private val caloriesRepository: CaloriesRepository,
+    private val oxygenSaturationRepository: OxygenSaturationRepository
 ) : ViewModel() {
 
     val latestHeartRate: StateFlow<Long> = heartRateRepository.getLatestHeartRate()
@@ -52,6 +49,9 @@ class DashboardViewModel @Inject constructor(
 
     private val _totalStepsForPeriod = MutableStateFlow(0L)
     val totalStepsForPeriod: StateFlow<Long> = _totalStepsForPeriod.asStateFlow()
+
+    val latestOxygenSaturation: StateFlow<Double> = oxygenSaturationRepository.getLatestOxygenSaturation()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     fun setPeriod(period: Period) {
         _selectedPeriod.value = period

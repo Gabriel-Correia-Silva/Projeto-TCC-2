@@ -29,7 +29,6 @@ object AppModule {
         ).fallbackToDestructiveMigration().build()
     }
 
-    // DAOs
     @Provides
     fun provideBatimentoCardiacoDao(appDatabase: AppDatabase): BatimentoCardiacoDao = appDatabase.batimentoCardiacoDao()
 
@@ -48,7 +47,9 @@ object AppModule {
     @Provides
     fun provideUserDao(appDatabase: AppDatabase): UserDao = appDatabase.userDao()
 
-    // Firebase
+    @Provides
+    fun provideOxigenacaoSanguineaDao(appDatabase: AppDatabase): OxigenacaoSanguineaDao = appDatabase.oxigenacaoSanguineaDao()
+
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
@@ -61,12 +62,10 @@ object AppModule {
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
 
-    // Health Connect
     @Provides
     @Singleton
     fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager = HealthConnectManager(context)
 
-    // Repositories
     @Provides
     @Singleton
     fun provideAuthRepository(auth: FirebaseAuth, firestore: FirebaseFirestore): AuthRepository = AuthRepository(auth, firestore)
@@ -90,8 +89,8 @@ object AppModule {
     fun provideHeartRateRepository(
         batimentoCardiacoDao: BatimentoCardiacoDao,
         healthConnectManager: HealthConnectManager,
-        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
-        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
+        firebaseAuth: FirebaseAuth,
+        firebaseHealthDataRepository: FirebaseHealthDataRepository
     ): HeartRateRepository {
         return HeartRateRepository(batimentoCardiacoDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
@@ -101,8 +100,8 @@ object AppModule {
     fun provideStepsRepository(
         passosDao: PassosDao,
         healthConnectManager: HealthConnectManager,
-        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
-        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
+        firebaseAuth: FirebaseAuth,
+        firebaseHealthDataRepository: FirebaseHealthDataRepository
     ): StepsRepository {
         return StepsRepository(passosDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
@@ -112,8 +111,8 @@ object AppModule {
     fun provideSleepRepository(
         sonoDao: SonoDao,
         healthConnectManager: HealthConnectManager,
-        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
-        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
+        firebaseAuth: FirebaseAuth,
+        firebaseHealthDataRepository: FirebaseHealthDataRepository
     ): SleepRepository {
         return SleepRepository(sonoDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
@@ -123,10 +122,21 @@ object AppModule {
     fun provideCaloriesRepository(
         caloriasDao: CaloriasDao,
         healthConnectManager: HealthConnectManager,
-        firebaseAuth: FirebaseAuth, // Parâmetro adicionado
-        firebaseHealthDataRepository: FirebaseHealthDataRepository // Parâmetro adicionado
+        firebaseAuth: FirebaseAuth,
+        firebaseHealthDataRepository: FirebaseHealthDataRepository
     ): CaloriesRepository {
         return CaloriesRepository(caloriasDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOxygenSaturationRepository(
+        oxigenacaoSanguineaDao: OxigenacaoSanguineaDao,
+        healthConnectManager: HealthConnectManager,
+        firebaseAuth: FirebaseAuth,
+        firebaseHealthDataRepository: FirebaseHealthDataRepository
+    ): OxygenSaturationRepository {
+        return OxygenSaturationRepository(oxigenacaoSanguineaDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides
@@ -135,9 +145,10 @@ object AppModule {
         heartRateRepository: HeartRateRepository,
         stepsRepository: StepsRepository,
         sleepRepository: SleepRepository,
-        caloriesRepository: CaloriesRepository
+        caloriesRepository: CaloriesRepository,
+        oxygenSaturationRepository: OxygenSaturationRepository
     ): SyncRepository {
-        return SyncRepository(heartRateRepository, stepsRepository, sleepRepository, caloriesRepository)
+        return SyncRepository(heartRateRepository, stepsRepository, sleepRepository, caloriesRepository, oxygenSaturationRepository)
     }
 
     @Provides

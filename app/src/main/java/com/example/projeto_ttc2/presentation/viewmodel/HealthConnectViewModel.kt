@@ -1,9 +1,11 @@
-// Local: com/example/projeto_ttc2/presentation/viewmodel/HealthConnectViewModel.kt
 package com.example.projeto_ttc2.presentation.viewmodel
 
 import android.content.Context
 import android.util.Log
+import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.health.connect.client.HealthConnectClient
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,8 +14,6 @@ import com.example.projeto_ttc2.database.repository.SyncRepository
 import com.example.projeto_ttc2.presentation.state.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,56 +24,45 @@ class HealthConnectViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val TAG = "HealthConnectViewModel"
-    private var isRequestingPermission = false
+
+    var isReady by mutableStateOf(false)
+        private set
 
     val permissions: Set<String> = HealthConnectManager.REQUIRED_PERMISSIONS
-
     val uiState = mutableStateOf<UiState>(UiState.Uninitialized)
-    private val _permissionRequestChannel = Channel<Set<String>>()
-    val permissionRequestChannel = _permissionRequestChannel.receiveAsFlow()
 
+    // A inicialização agora apenas prepara o manager.
     fun initialLoad(context: Context) {
         if (HealthConnectClient.getSdkStatus(context.applicationContext) != HealthConnectClient.SDK_AVAILABLE) {
             uiState.value = UiState.Error("Health Connect não está disponível ou precisa ser atualizado")
             return
         }
         healthConnectManager.initialize(context.applicationContext)
-        checkPermissionsAndFetchData()
+        isReady = true
     }
 
+    // A função agora é 'suspend' e faz a verificação diretamente.
     suspend fun hasAllPermissions(): Boolean {
-        return healthConnectManager.getGrantedPermissions().containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
-    }
-
-    private fun checkPermissionsAndFetchData() {
-        viewModelScope.launch {
-            if (hasAllPermissions()) {
-                isRequestingPermission = false
-                syncData(showIndicator = false) // Chama sem indicador na carga inicial
-            } else {
-                uiState.value = UiState.PermissionRequired
-            }
+        if (!isReady) {
+            // Se não estiver pronto, espera um pouco para dar tempo de inicializar.
+            // Numa app real, poderia usar-se um Flow ou um mecanismo mais reativo.
+            kotlinx.coroutines.delay(500)
         }
+        return healthConnectManager.getGrantedPermissions().containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
     }
 
     fun onPermissionsResult(granted: Set<String>) {
         viewModelScope.launch {
-            isRequestingPermission = false
             if (granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)) {
-                syncData(showIndicator = true) // Mostra indicador após conceder permissão
+                syncData(showIndicator = true)
             } else {
                 uiState.value = UiState.Error("As permissões de saúde são necessárias para o funcionamento do app.")
             }
         }
     }
 
-    fun requestPermissions() {
-        viewModelScope.launch {
-            if (!isRequestingPermission) {
-                isRequestingPermission = true
-                _permissionRequestChannel.send(HealthConnectManager.REQUIRED_PERMISSIONS)
-            }
-        }
+    fun requestPermissions(launcher: ActivityResultLauncher<Set<String>>) {
+        launcher.launch(HealthConnectManager.REQUIRED_PERMISSIONS)
     }
 
     fun syncData(showIndicator: Boolean = false): Job {
@@ -88,28 +77,6 @@ class HealthConnectViewModel @Inject constructor(
                 Log.e(TAG, "FALHA ao sincronizar dados.", e)
                 uiState.value = UiState.Error(e.message ?: "Erro desconhecido ao sincronizar dados")
             }
-        }
-    }
-
-    // Adicionando métodos que estão sendo referenciados no Navigation.kt
-    fun permissionsGranted(context: Context, permissions: Set<String>? = null): Boolean {
-        return try {
-            if (permissions != null) {
-                permissions.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
-            } else {
-                // Verifica se já tem as permissões concedidas
-                val grantedPermissions = healthConnectManager.getGrantedPermissions()
-                grantedPermissions.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
-            }
-        } catch (e: Exception) {
-            false // Se há erro, assume que não tem permissões
-        }
-    }
-
-    fun requestPermissions(launcher: androidx.activity.result.ActivityResultLauncher<Set<String>>) {
-        if (!isRequestingPermission) {
-            isRequestingPermission = true
-            launcher.launch(HealthConnectManager.REQUIRED_PERMISSIONS)
         }
     }
 }

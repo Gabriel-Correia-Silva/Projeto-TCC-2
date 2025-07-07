@@ -9,5 +9,6 @@ data class DashboardData(
     val distanceKm: Double = 0.0,
     val caloriesKcal: Double = 2000.0,
     val activeCaloriesKcal: Double = 0.0,
-    val sleepSession: Sono? = null
+    val sleepSession: Sono? = null,
+    val oxygenSaturation: Double = 0.0
 )

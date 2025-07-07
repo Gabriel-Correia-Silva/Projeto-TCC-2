@@ -14,3 +14,10 @@ val Pink40 = Color(0xFF7D5260)
 val TealGreen = Color(0xFF4DB6AC)
 val LightTeal = Color(0xFFE0F2F1)
 val DarkText = Color(0xFF004D40)
+
+// Novas cores personalizadas para os cards do Dashboard
+val HeartRateRed = Color(0xFFE57373)
+val StepsBlue = Color(0xFF64B5F6)
+val CaloriesOrange = Color(0xFFFFB74D)
+val SleepGreen = Color(0xFF81C784)
+val DefaultCardColor = TealGreen // Cor padrão

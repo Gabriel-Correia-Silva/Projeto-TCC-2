@@ -7,6 +7,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.OxigenacaoSanguineaDao
 import com.example.projeto_ttc2.database.entities.OxigenacaoSanguinea
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -32,7 +33,7 @@ class OxygenSaturationRepository @Inject constructor(
         }
     }
 
-    suspend fun syncData() {
+    suspend fun syncData(batch: WriteBatch) {
         val client = healthConnectManager.client
         val endTime = Instant.now()
         val startTime = endTime.minus(15, ChronoUnit.DAYS)
@@ -57,7 +58,7 @@ class OxygenSaturationRepository @Inject constructor(
             if (entities.isNotEmpty()) {
                 oxigenacaoSanguineaDao.insertAll(entities)
                 if (userId.isNotEmpty()) {
-                    firebaseHealthDataRepository.syncOxygenSaturationData(userId, entities)
+                    firebaseHealthDataRepository.syncOxygenSaturationData(userId, entities, batch)
                 }
 
                 val fifteenDaysAgo = Instant.now().minus(15, ChronoUnit.DAYS).toEpochMilli()

@@ -7,6 +7,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.BatimentoCardiacoDao
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -48,7 +49,7 @@ class HeartRateRepository @Inject constructor(
         return batimentoCardiacoDao.getBatimentosDesdeInicioDoDia(startOfDay)
     }
 
-    suspend fun syncData() {
+    suspend fun syncData(batch: WriteBatch) {
         val client = healthConnectManager.client
         val endTime = Instant.now()
 
@@ -74,10 +75,10 @@ class HeartRateRepository @Inject constructor(
             }
 
             if (entities.isNotEmpty()) {
-                Log.i(TAG, "Enviando ${entities.size} registros de batimentos para o Firestore.")
+                Log.i(TAG, "Adicionando ${entities.size} registros de batimentos ao lote.")
                 batimentoCardiacoDao.insertAll(entities)
                 if (userId.isNotEmpty()) {
-                    firebaseHealthDataRepository.syncHeartRateData(userId, entities)
+                    firebaseHealthDataRepository.syncHeartRateData(userId, entities, batch)
                 }
             } else {
                 Log.w(TAG, "Nenhum novo dado de batimento cardíaco para sincronizar.")

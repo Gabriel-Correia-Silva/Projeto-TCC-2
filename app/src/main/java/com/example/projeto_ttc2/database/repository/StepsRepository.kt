@@ -7,6 +7,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.PassosDao
 import com.example.projeto_ttc2.database.entities.Passos
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -25,7 +26,7 @@ class StepsRepository @Inject constructor(
     private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "StepsRepository"
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // YYYY-MM-DD
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // yyyy-MM-dd
 
     fun getTodayStepsFlow(): Flow<Long> {
         val today = LocalDate.now().format(dateFormatter)
@@ -62,7 +63,7 @@ class StepsRepository @Inject constructor(
         }
     }
 
-    suspend fun syncData() {
+    suspend fun syncData(batch: WriteBatch) {
         val client = healthConnectManager.client
         val startTime = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
         val endTime = Instant.now()
@@ -90,7 +91,7 @@ class StepsRepository @Inject constructor(
                 Log.d(TAG, "Sincronização de passos concluída. ${stepsByDay.size} dias processados.")
 
                 if (userId.isNotEmpty()) {
-                    firebaseHealthDataRepository.syncStepsData(userId, passosEntities)
+                    firebaseHealthDataRepository.syncStepsData(userId, passosEntities, batch)
                 }
             }
         } catch (e: Exception) {

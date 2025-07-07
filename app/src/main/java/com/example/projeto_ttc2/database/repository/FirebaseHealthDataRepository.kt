@@ -1,14 +1,15 @@
 package com.example.projeto_ttc2.database.repository
 
 import com.example.projeto_ttc2.database.entities.*
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 
 interface FirebaseHealthDataRepository {
-    suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>)
-    suspend fun syncStepsData(userId: String, stepsData: List<Passos>)
-    suspend fun syncSleepData(userId: String, sleepData: List<Sono>)
-    suspend fun syncCaloriesData(userId: String, caloriesData: List<Calorias>)
-    suspend fun syncOxygenSaturationData(userId: String, oxygenData: List<OxigenacaoSanguinea>)
+    suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>, batch: WriteBatch)
+    suspend fun syncStepsData(userId: String, stepsData: List<Passos>, batch: WriteBatch)
+    suspend fun syncSleepData(userId: String, sleepData: List<Sono>, batch: WriteBatch)
+    suspend fun syncCaloriesData(userId: String, caloriesData: List<Calorias>, batch: WriteBatch)
+    suspend fun syncOxygenSaturationData(userId: String, oxygenData: List<OxigenacaoSanguinea>, batch: WriteBatch)
 
     fun getUserHeartRateData(userId: String): Flow<List<BatimentoCardiaco>>
     fun getUserStepsData(userId: String): Flow<List<Passos>>

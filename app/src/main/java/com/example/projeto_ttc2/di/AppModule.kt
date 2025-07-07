@@ -147,13 +147,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideSyncRepository(
+        firestore: FirebaseFirestore,
         heartRateRepository: HeartRateRepository,
         stepsRepository: StepsRepository,
         sleepRepository: SleepRepository,
         caloriesRepository: CaloriesRepository,
         oxygenSaturationRepository: OxygenSaturationRepository
     ): SyncRepository {
-        return SyncRepository(heartRateRepository, stepsRepository, sleepRepository, caloriesRepository, oxygenSaturationRepository)
+        return SyncRepository(firestore, heartRateRepository, stepsRepository, sleepRepository, caloriesRepository, oxygenSaturationRepository)
     }
 
     @Provides

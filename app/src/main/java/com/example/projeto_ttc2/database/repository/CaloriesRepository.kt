@@ -8,6 +8,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.CaloriasDao
 import com.example.projeto_ttc2.database.entities.Calorias
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
@@ -34,7 +35,7 @@ class CaloriesRepository @Inject constructor(
         return caloriasDao.getSomaCaloriasPorTipoDesde("TOTAL", startOfDay).map { it ?: 0.0 }
     }
 
-    suspend fun syncData() {
+    suspend fun syncData(batch: WriteBatch) {
         val client = healthConnectManager.client
         val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
         val now = Instant.now()
@@ -65,7 +66,7 @@ class CaloriesRepository @Inject constructor(
             }
 
             if (userId.isNotEmpty() && allEntities.isNotEmpty()) {
-                firebaseHealthDataRepository.syncCaloriesData(userId, allEntities)
+                firebaseHealthDataRepository.syncCaloriesData(userId, allEntities, batch)
             }
 
             Log.d(TAG, "Sincronização de calorias concluída.")

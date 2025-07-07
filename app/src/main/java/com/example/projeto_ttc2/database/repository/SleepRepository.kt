@@ -7,6 +7,7 @@ import androidx.health.connect.client.time.TimeRangeFilter
 import com.example.projeto_ttc2.database.dao.SonoDao
 import com.example.projeto_ttc2.database.entities.Sono
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -26,7 +27,7 @@ class SleepRepository @Inject constructor(
         return sonoDao.getUltimaSessaoSono()
     }
 
-    suspend fun syncData() {
+    suspend fun syncData(batch: WriteBatch) {
         val client = healthConnectManager.client
         val startTime = Instant.now().minus(48, ChronoUnit.HOURS)
         val endTime = Instant.now()
@@ -57,7 +58,7 @@ class SleepRepository @Inject constructor(
                 Log.d(TAG, "${sonoEntities.size} sessões de sono inseridas/atualizadas.")
 
                 if (userId.isNotEmpty()) {
-                    firebaseHealthDataRepository.syncSleepData(userId, sonoEntities)
+                    firebaseHealthDataRepository.syncSleepData(userId, sonoEntities, batch)
                 }
             } else {
                 Log.d(TAG, "Nenhuma nova sessão de sono encontrada.")

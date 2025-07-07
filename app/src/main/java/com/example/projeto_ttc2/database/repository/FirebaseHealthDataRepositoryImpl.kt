@@ -5,6 +5,7 @@ import com.example.projeto_ttc2.database.entities.*
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
@@ -17,59 +18,49 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : FirebaseHealthDataRepository {
 
-    override suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>) {
+    override suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>, batch: WriteBatch) {
         if (userId.isBlank()) return
         val collection = firestore.collection("users").document(userId).collection("heart_rate")
-        val batch = firestore.batch()
         for (data in heartRateData) {
             val docRef = collection.document(data.timestamp.toString())
             batch.set(docRef, data)
         }
-        batch.commit().await()
     }
 
-    override suspend fun syncStepsData(userId: String, stepsData: List<Passos>) {
+    override suspend fun syncStepsData(userId: String, stepsData: List<Passos>, batch: WriteBatch) {
         if (userId.isBlank()) return
         val collection = firestore.collection("users").document(userId).collection("steps")
-        val batch = firestore.batch()
         for (data in stepsData) {
             val docRef = collection.document(data.data)
             batch.set(docRef, data)
         }
-        batch.commit().await()
     }
 
-    override suspend fun syncSleepData(userId: String, sleepData: List<Sono>) {
+    override suspend fun syncSleepData(userId: String, sleepData: List<Sono>, batch: WriteBatch) {
         if (userId.isBlank()) return
         val collection = firestore.collection("users").document(userId).collection("sleep")
-        val batch = firestore.batch()
         for (data in sleepData) {
             val docRef = collection.document(data.healthConnectId)
             batch.set(docRef, data)
         }
-        batch.commit().await()
     }
 
-    override suspend fun syncCaloriesData(userId: String, caloriesData: List<Calorias>) {
+    override suspend fun syncCaloriesData(userId: String, caloriesData: List<Calorias>, batch: WriteBatch) {
         if (userId.isBlank()) return
         val collection = firestore.collection("users").document(userId).collection("calories")
-        val batch = firestore.batch()
         for (data in caloriesData) {
             val docRef = collection.document(data.healthConnectId)
             batch.set(docRef, data)
         }
-        batch.commit().await()
     }
 
-    override suspend fun syncOxygenSaturationData(userId: String, oxygenData: List<OxigenacaoSanguinea>) {
+    override suspend fun syncOxygenSaturationData(userId: String, oxygenData: List<OxigenacaoSanguinea>, batch: WriteBatch) {
         if (userId.isBlank()) return
         val collection = firestore.collection("users").document(userId).collection("oxygen_saturation")
-        val batch = firestore.batch()
         for (data in oxygenData) {
             val docRef = collection.document(data.timestamp.toString())
             batch.set(docRef, data)
         }
-        batch.commit().await()
     }
 
     private fun getTimestampFromMap(map: Map<String, Any>?): Timestamp? {

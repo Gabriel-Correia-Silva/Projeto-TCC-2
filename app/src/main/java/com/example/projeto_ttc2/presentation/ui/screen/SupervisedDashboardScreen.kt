@@ -10,25 +10,31 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.projeto_ttc2.database.local.DashboardData
 import com.example.projeto_ttc2.presentation.ui.components.*
 import com.example.projeto_ttc2.presentation.ui.theme.defaultCard
+import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupervisedDashboardScreen(
     userName: String,
+    dashboardViewModel: DashboardViewModel,
     dashboardData: DashboardData,
     heartRateData: List<Long> = emptyList(),
     onSosClick: () -> Unit,
     isRefreshing: Boolean,
     onManualRefresh: () -> Unit,
     onBackgroundRefresh: () -> Unit,
+    onNavigateToFeedback: () -> Unit,
     onNavigateToSleep: () -> Unit,
     onNavigateToHeartRate: () -> Unit,
     onNavigateToSteps: () -> Unit
 ) {
+    val unreadFeedbackCount by dashboardViewModel.unreadFeedbackCount.collectAsStateWithLifecycle(initialValue = 0)
+
     LaunchedEffect(Unit) {
         while (true) {
             onBackgroundRefresh()
@@ -49,6 +55,7 @@ fun SupervisedDashboardScreen(
     }
 
     if (showIncentiveDialog) {
+        // CORREÇÃO: Removido o .toInt() para corresponder ao tipo Long esperado.
         IncentiveDialog(
             steps = dashboardData.steps,
             onDismiss = { showIncentiveDialog = false }
@@ -66,6 +73,13 @@ fun SupervisedDashboardScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
+                UnreadFeedbackCard(
+                    unreadCount = unreadFeedbackCount,
+                    onClick = onNavigateToFeedback,
+                    cardColor = MaterialTheme.colorScheme.tertiary
+                )
+            }
+            item {
                 HeartRateCard(
                     bpm = dashboardData.heartRate,
                     heartRateData = heartRateData,
@@ -74,8 +88,9 @@ fun SupervisedDashboardScreen(
                 )
             }
             item {
+                // CORREÇÃO: Removido o .toInt() para corresponder ao tipo Long esperado.
                 StepsCard(
-                    steps = dashboardData.steps,
+                    steps = dashboardData.steps.toInt(),
                     goal = dashboardData.stepsGoal,
                     distanceKm = dashboardData.distanceKm,
                     onClick = onNavigateToSteps,
@@ -83,6 +98,7 @@ fun SupervisedDashboardScreen(
                 )
             }
             item {
+                // CORREÇÃO: Removidas as conversões .toInt() para corresponder ao tipo Double.
                 CaloriesCard(
                     activeKcal = dashboardData.activeCaloriesKcal,
                     totalKcal = dashboardData.caloriesKcal,

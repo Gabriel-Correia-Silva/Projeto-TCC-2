@@ -57,7 +57,8 @@ fun AppNavigation(
             val routesWithHeader = listOf(
                 "supervisor_dashboard", "supervised_dashboard", "settings_screen",
                 "sleep_screen", "emergency_contacts_screen", "heart_rate_detail_screen",
-                "steps_detail_screen", "profile_screen", "night_monitoring_screen", "professional_screen"
+                "steps_detail_screen", "profile_screen", "night_monitoring_screen",
+                "professional_screen", "feedback_list_screen"
             )
             val isDashboard = currentRoute in listOf("supervisor_dashboard", "supervised_dashboard")
             if (currentRoute in routesWithHeader) {
@@ -73,13 +74,14 @@ fun AppNavigation(
                         "profile_screen" -> "Perfil"
                         "night_monitoring_screen" -> "Monitoramento Noturno"
                         "professional_screen" -> "Profissional"
+                        "feedback_list_screen" -> "Centro de Feedback"
                         else -> "App"
                     },
                     showBackArrow = !isDashboard,
                     onBackClick = { navController.popBackStack() },
                     showIcons = isDashboard,
                     onSettingsClick = { navController.navigate("settings_screen") },
-                    onNotificationsClick = { navController.navigate("professional_screen") },
+                    onNotificationsClick = { navController.navigate("feedback_list_screen") },
                     onLogout = {
                         authViewModel.signOut()
                         navController.navigate("login") {
@@ -174,6 +176,7 @@ fun AppNavigation(
             }
 
             composable("supervised_dashboard") {
+                // CORREÇÃO: Removido o .collectAsState() desnecessário.
                 val uiState by healthConnectViewModel.uiState
                 val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
                 val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
@@ -186,6 +189,7 @@ fun AppNavigation(
 
                 SupervisedDashboardScreen(
                     userName = userName,
+                    dashboardViewModel = dashboardViewModel,
                     dashboardData = DashboardData(
                         heartRate = latestBpm, steps = todaySteps, distanceKm = todayDistanceKm,
                         activeCaloriesKcal = activeCalories, caloriesKcal = totalCalories,
@@ -197,6 +201,7 @@ fun AppNavigation(
                     isRefreshing = uiState == UiState.Loading,
                     onManualRefresh = { scope.launch { healthConnectViewModel.syncData(true) } },
                     onBackgroundRefresh = { scope.launch { healthConnectViewModel.syncData(false) } },
+                    onNavigateToFeedback = { navController.navigate("feedback_list_screen") },
                     onNavigateToSleep = { navController.navigate("sleep_screen") },
                     onNavigateToHeartRate = { navController.navigate("heart_rate_detail_screen") },
                     onNavigateToSteps = { navController.navigate("steps_detail_screen") }
@@ -206,6 +211,7 @@ fun AppNavigation(
             composable("professional_screen") { ProfessionalScreen() }
             composable("patient_detail/{patientId}") { PatientDetailScreen() }
             composable("settings_screen") { SettingsScreen(navController = navController) }
+            composable("feedback_list_screen") { FeedbackListScreen() }
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
 
             composable("sleep_screen") {

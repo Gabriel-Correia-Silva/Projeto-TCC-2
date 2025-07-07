@@ -4,6 +4,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,33 +20,35 @@ class AuthRepository @Inject constructor(
         return auth.currentUser
     }
 
+    // Função adicionada para resolver o erro de compilação
+    fun getCurrentUserFlow(): Flow<FirebaseUser?> = callbackFlow {
+        val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            trySend(firebaseAuth.currentUser)
+        }
+        auth.addAuthStateListener(authStateListener)
+        awaitClose { auth.removeAuthStateListener(authStateListener) }
+    }
+
     suspend fun signInWithGoogle(idToken: String): AuthResult {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
-
             val authResult = auth.signInWithCredential(credential).await()
             val user = authResult.user
 
             if (user != null) {
-
                 val userDoc = firestore.collection("users").document(user.uid).get().await()
                 if (userDoc.exists()) {
-
                     AuthResult.Success(user)
                 } else {
-
                     AuthResult.NeedsRegistration(user)
                 }
             } else {
-
                 AuthResult.Error("Usuário nulo após autenticação.")
             }
         } catch (e: Exception) {
-
             AuthResult.Error(e.message ?: "Falha na autenticação")
         }
     }
-
 
     suspend fun registerUser(
         userId: String,
@@ -52,27 +57,23 @@ class AuthRepository @Inject constructor(
         role: String,
         supervisorIds: List<String>? = null
     ) {
-
         val userData = hashMapOf(
             "name" to name,
             "email" to email,
             "role" to role,
             "supervisorIds" to supervisorIds
         )
-
         firestore.collection("users").document(userId).set(userData).await()
     }
 
     suspend fun getUserRole(userId: String): String {
         return try {
-
             firestore.collection("users").document(userId).get().await()
                 .getString("role") ?: "unknown"
         } catch (e: Exception) {
             "unknown"
         }
     }
-
 
     fun signOut() {
         auth.signOut()

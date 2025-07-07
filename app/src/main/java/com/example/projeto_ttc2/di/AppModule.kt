@@ -72,6 +72,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideFeedbackRepository(firestore: FirebaseFirestore): FeedbackRepository = FeedbackRepository(firestore)
+
+
+    @Provides
+    @Singleton
     fun provideFirebaseHealthDataRepository(firestore: FirebaseFirestore): FirebaseHealthDataRepository {
         return FirebaseHealthDataRepositoryImpl(firestore)
     }

@@ -35,7 +35,7 @@ class HealthConnectManager @Inject constructor(context: Context) {
             HealthPermission.getReadPermission(SleepSessionRecord::class),
             HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
             HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-            HealthPermission.getReadPermission(OxygenSaturationRecord::class) 
+            HealthPermission.getReadPermission(OxygenSaturationRecord::class)
         )
     }
 }

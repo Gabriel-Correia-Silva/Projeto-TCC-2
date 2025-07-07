@@ -23,7 +23,9 @@ class DashboardViewModel @Inject constructor(
     private val stepsRepository: StepsRepository,
     private val sleepRepository: SleepRepository,
     private val caloriesRepository: CaloriesRepository,
-    private val oxygenSaturationRepository: OxygenSaturationRepository
+    private val oxygenSaturationRepository: OxygenSaturationRepository,
+    private val feedbackRepository: FeedbackRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     val latestHeartRate: StateFlow<Long> = heartRateRepository.getLatestHeartRate()
@@ -52,6 +54,11 @@ class DashboardViewModel @Inject constructor(
 
     val latestOxygenSaturation: StateFlow<Double> = oxygenSaturationRepository.getLatestOxygenSaturation()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
+
+    val unreadFeedbackCount: StateFlow<Int> =
+        authRepository.getCurrentUserFlow().flatMapLatest { user ->
+            feedbackRepository.getUnreadFeedbackCount(user?.uid ?: "")
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun setPeriod(period: Period) {
         _selectedPeriod.value = period

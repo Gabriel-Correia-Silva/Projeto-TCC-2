@@ -3,6 +3,7 @@ package com.example.projeto_ttc2.background
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -29,16 +30,13 @@ class DataSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         Log.d("DataSyncWorker", "Iniciando sincronização de dados em segundo plano.")
 
-        // Inject or get an instance of HealthConnectManager
-        // For simplicity, this example assumes you can get it.
-        // You might need to adjust your dependency injection for the worker.
         val healthConnectManager = HealthConnectManager(appContext)
         healthConnectManager.initialize(appContext)
         val hasPermissions = healthConnectManager.getGrantedPermissions().containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)
 
         if (!hasPermissions) {
             Log.w("DataSyncWorker", "Permissões não concedidas. Adiando a sincronização.")
-            return Result.failure() // or Result.retry()
+            return Result.failure()
         }
 
         try {
@@ -58,11 +56,16 @@ class DataSyncWorker @AssistedInject constructor(
         val notification = NotificationCompat.Builder(appContext, channelId)
             .setContentTitle("Sincronizando Dados de Saúde")
             .setContentText("O monitoramento em tempo real está ativo.")
-            .setSmallIcon(R.mipmap.ic_launcher) // Certifique-se que este ícone existe
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .build()
 
-        return ForegroundInfo(notificationId, notification)
+        // CORREÇÃO: Adicionar o tipo de serviço ao criar o ForegroundInfo.
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(notificationId, notification)
+        }
     }
 
     private fun createNotificationChannel() {

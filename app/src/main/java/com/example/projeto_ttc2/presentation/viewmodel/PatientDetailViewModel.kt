@@ -4,11 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.entities.Feedback
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
 import com.example.projeto_ttc2.database.entities.User
 import com.example.projeto_ttc2.database.repository.FirebaseHealthDataRepository
 import com.example.projeto_ttc2.database.repository.UserRepository
+import com.example.projeto_ttc2.database.repository.FeedbackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,7 @@ import javax.inject.Inject
 class PatientDetailViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val healthDataRepository: FirebaseHealthDataRepository,
+    private val feedbackRepository: FeedbackRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,11 +47,23 @@ class PatientDetailViewModel @Inject constructor(
     private fun loadAllData() {
         viewModelScope.launch {
             _patient.value = userRepository.getUser(patientId)
-
-            // --- ATUALIZAÇÃO DA CHAMADA ---
             healthDataRepository.getUserStepsData(patientId).collect { _stepsData.value = it }
-            healthDataRepository.getAllHeartRateData(patientId).collect { _heartRateData.value = it } // Usa a nova função
+            healthDataRepository.getAllHeartRateData(patientId).collect { _heartRateData.value = it }
             healthDataRepository.getUserSleepData(patientId).collect { _sleepData.value = it }
+        }
+    }
+
+    fun sendFeedback(senderId: String, message: String) {
+        if (message.isBlank()) return
+
+        viewModelScope.launch {
+            val feedback = Feedback(
+                senderId = senderId,
+                recipientId = patientId,
+                message = message,
+                read = false
+            )
+            feedbackRepository.sendFeedback(feedback)
         }
     }
 }

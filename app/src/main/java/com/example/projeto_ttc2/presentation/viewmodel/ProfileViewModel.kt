@@ -32,7 +32,7 @@ class ProfileViewModel @Inject constructor(
             _profileState.value = ProfileState.Loading
             val currentUser = authRepository.getCurrentUser()
             if (currentUser == null) {
-                _profileState.value = ProfileState.Error("Usuário não autenticado.")
+                _profileState.value = ProfileState.Error("Utilizador não autenticado.")
                 return@launch
             }
 
@@ -41,13 +41,14 @@ class ProfileViewModel @Inject constructor(
                 if (user != null) {
                     _profileState.value = ProfileState.Success(user)
                 } else {
-                    _profileState.value = ProfileState.Error("Perfil de usuário não encontrado.")
+                    _profileState.value = ProfileState.Error("Perfil de utilizador não encontrado.")
                 }
             } catch (e: Exception) {
                 _profileState.value = ProfileState.Error("Falha ao carregar perfil: ${e.message}")
             }
         }
     }
+
     fun clearState() {
         val currentState = _profileState.value
         if (currentState is ProfileState.Success) {
@@ -57,30 +58,24 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    // --- FUNÇÃO MODIFICADA ---
     fun saveProfile(
         fullName: String,
-        gender: String,
-        birthDate: LocalDate?,
-        imageUri: Uri?
+        birthDate: LocalDate?
     ) {
         viewModelScope.launch {
             _profileState.value = ProfileState.Loading
             val currentUser = authRepository.getCurrentUser()
             if (currentUser == null) {
-                _profileState.value = ProfileState.Error("Usuário não autenticado para salvar.")
+                _profileState.value = ProfileState.Error("Utilizador não autenticado para guardar.")
                 return@launch
             }
 
             try {
+                // Apenas nome e data de nascimento são atualizados
                 val updates = mutableMapOf<String, Any?>()
                 updates["name"] = fullName
-                updates["gender"] = gender
                 updates["birthDate"] = birthDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)
-
-                if (imageUri != null) {
-                    val imageUrl = userRepository.uploadProfileImage(currentUser.uid, imageUri)
-                    updates["profileImageUrl"] = imageUrl
-                }
 
                 userRepository.updateUser(currentUser.uid, updates)
                 _profileState.value = ProfileState.UpdateSuccess

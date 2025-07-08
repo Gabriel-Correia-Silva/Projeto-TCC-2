@@ -29,9 +29,12 @@ import com.example.projeto_ttc2.R
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
-import com.example.projeto_ttc2.presentation.ui.components.DashboardCard
+import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.PatientDetailViewModel
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun PatientDetailScreen(
@@ -46,72 +49,90 @@ fun PatientDetailScreen(
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Visão Geral", "Passos", "Frequência", "Sono")
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .verticalScroll(scrollState)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
-        patient?.let { user ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        model = user.profileImageUrl,
-                        fallback = painterResource(id = R.drawable.ic_launcher_foreground)
-                    ),
-                    contentDescription = "Foto do Perfil",
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = user.name ?: "Paciente",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = user.email ?: "Email não disponível",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
-                    )
-                }
-            }
-        } ?: Box(modifier = Modifier.height(80.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
+        // Cabeçalho do Paciente
+        PatientHeader(patient = patient)
 
-        Spacer(modifier = Modifier.height(24.dp))
-
+        // Abas de Navegação
         TabRow(
             selectedTabIndex = selectedTabIndex,
-            containerColor = Color.Transparent,
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.primary
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { selectedTabIndex = index },
-                    text = { Text(title) }
+                    text = { Text(title, fontWeight = if(selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal) }
                 )
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
 
-        when (selectedTabIndex) {
-            0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData)
-            1 -> StepsTab(stepsData)
-            2 -> HeartRateTab(heartRateData)
-            3 -> SleepTab(sleepData)
+        // Conteúdo da Aba
+        Box(modifier = Modifier.padding(16.dp)) {
+            when (selectedTabIndex) {
+                0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData)
+                1 -> StepsTab(stepsData)
+                2 -> HeartRateTab(heartRateData)
+                3 -> SleepTab(sleepData)
+            }
         }
     }
 }
+
+@Composable
+fun PatientHeader(patient: com.example.projeto_ttc2.database.entities.User?) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
+    ) {
+        if (patient == null) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = patient.profileImageUrl,
+                        fallback = painterResource(id = R.drawable.ic_launcher_foreground)
+                    ),
+                    contentDescription = "Foto do Perfil",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = patient.name ?: "Paciente",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = patient.email ?: "Email não disponível",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun OverviewTab(
@@ -122,65 +143,136 @@ fun OverviewTab(
     sleep: List<Sono>
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val lastHeartRate = heartRate.maxByOrNull { it.timestamp }
+        val todaySteps = steps.find { it.data == LocalDate.now().toString() }?.contagem ?: 0L
+        val lastSleep = sleep.maxByOrNull { it.endTime }
+
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SummaryCard(
                 icon = Icons.Default.DirectionsWalk,
                 label = "Passos Hoje",
-                value = steps.sumOf { it.contagem }.toString(),
-                modifier = Modifier.weight(1f)
+                value = todaySteps.toString(),
+                modifier = Modifier.weight(1f),
+                color = Color(0xFF64B5F6) // StepsBlue
             )
             SummaryCard(
-                icon = Icons.Default.Favorite,
+                icon = Icons.Default.FavoriteBorder,
                 label = "Último BPM",
-                value = "${heartRate.firstOrNull()?.bpm ?: "--"}",
-                unit = "bpm",
-                modifier = Modifier.weight(1f)
+                value = lastHeartRate?.bpm?.toString() ?: "--",
+                unit = if (lastHeartRate != null) "bpm" else null,
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE57373) // HeartRateRed
             )
         }
-        val lastSleep = sleep.firstOrNull()
-        val sleepHours = lastSleep?.durationMinutes?.div(60) ?: 0
-        val sleepMinutes = lastSleep?.durationMinutes?.rem(60) ?: 0
-        SummaryCard(
-            icon = Icons.Default.Bedtime,
-            label = "Último Sono",
-            value = if (lastSleep != null) "${sleepHours}h ${sleepMinutes}m" else "--",
-            isFullWidth = true
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            val sleepHours = lastSleep?.durationMinutes?.div(60) ?: 0
+            val sleepMinutes = lastSleep?.durationMinutes?.rem(60) ?: 0
+            SummaryCard(
+                icon = Icons.Default.Bedtime,
+                label = "Último Sono",
+                value = if (lastSleep != null) "${sleepHours}h ${sleepMinutes}m" else "--",
+                modifier = Modifier.weight(1f),
+                color = Color(0xFF81C784) // SleepGreen
+            )
+            SummaryCard(
+                icon = Icons.Default.LocalFireDepartment,
+                label = "Calorias",
+                value = "--", // Dado não disponível no ViewModel
+                unit = "kcal",
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFFFB74D) // CaloriesOrange
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         FeedbackInputCard(viewModel, authViewModel)
     }
 }
 
 @Composable
 fun StepsTab(stepsData: List<Passos>) {
-    Text("Detalhes de Passos")
-    Text("Total de passos hoje: ${stepsData.sumOf { it.contagem }}")
+    if (stepsData.isEmpty()) {
+        EmptyContentState("Sem dados de passos para exibir.")
+        return
+    }
+
+    val chartData = remember(stepsData) {
+        stepsData.map {
+            val date = LocalDate.parse(it.data)
+            BarData(
+                value = it.contagem.toFloat(),
+                label = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pt", "BR"))
+            )
+        }
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Passos na Última Semana", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+        InteractiveBarChart(
+            data = chartData,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+        )
+    }
 }
 
 @Composable
 fun HeartRateTab(heartRateData: List<BatimentoCardiaco>) {
-    if (heartRateData.isNotEmpty()) {
-        val minBpm = heartRateData.minOfOrNull { it.bpm } ?: "--"
-        val maxBpm = heartRateData.maxOfOrNull { it.bpm } ?: "--"
-        Text("Variação de BPM hoje: $minBpm - $maxBpm bpm")
-        Spacer(modifier = Modifier.height(16.dp))
-    } else {
-        EmptyState("Sem dados de frequência cardíaca para exibir.")
+    if (heartRateData.isEmpty()) {
+        EmptyContentState("Sem dados de frequência cardíaca para exibir.")
+        return
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("Batimentos Hoje", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+        HeartRateBarChart(
+            data = heartRateData,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(300.dp)
+        )
     }
 }
 
 @Composable
 fun SleepTab(sleepData: List<Sono>) {
     val lastSleep = sleepData.firstOrNull()
-    if(lastSleep != null) {
-        Text("Detalhes da última noite de sono:")
-        Text("Duração total: ${lastSleep.durationMinutes} minutos")
-        Text("Sono profundo: ${lastSleep.deepSleepDurationMinutes ?: 0} minutos")
-        Text("Sono leve: ${lastSleep.lightSleepDurationMinutes ?: 0} minutos")
-        Text("Sono REM: ${lastSleep.remSleepDurationMinutes ?: 0} minutos")
-    } else {
-        EmptyState("Sem dados de sono para exibir.")
+    if (lastSleep == null) {
+        EmptyContentState("Sem dados de sono para exibir.")
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Detalhes da Última Noite de Sono", style = MaterialTheme.typography.titleLarge)
+        SleepInfoRow("Duração total", lastSleep.durationMinutes)
+        SleepInfoRow("Sono profundo", lastSleep.deepSleepDurationMinutes)
+        SleepInfoRow("Sono leve", lastSleep.lightSleepDurationMinutes)
+        SleepInfoRow("Sono REM", lastSleep.remSleepDurationMinutes)
+        SleepInfoRow("Tempo acordado", lastSleep.awakeDurationMinutes)
     }
 }
+
+@Composable
+fun SleepInfoRow(label: String, minutes: Long?) {
+    val durationText = if (minutes != null) {
+        "${minutes / 60}h ${minutes % 60}m"
+    } else {
+        "--"
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, fontWeight = FontWeight.Medium)
+            Text(durationText, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
 
 @Composable
 fun SummaryCard(
@@ -189,34 +281,39 @@ fun SummaryCard(
     value: String,
     unit: String? = null,
     modifier: Modifier = Modifier,
-    isFullWidth: Boolean = false
+    color: Color = TealGreen
 ) {
-    DashboardCard(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = color)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 modifier = Modifier.size(32.dp),
                 tint = Color.White
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                Row(verticalAlignment = Alignment.Bottom) {
+            Text(label, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = value,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                unit?.let {
                     Text(
-                        text = value,
+                        text = " $it",
                         color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                     )
-                    unit?.let {
-                        Text(
-                            text = " $it",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
-                    }
                 }
             }
         }
@@ -224,11 +321,11 @@ fun SummaryCard(
 }
 
 @Composable
-fun EmptyState(message: String) {
+fun EmptyContentState(message: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .height(300.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(text = message, color = Color.Gray, textAlign = TextAlign.Center)
@@ -263,13 +360,14 @@ fun FeedbackInputCard(
             Button(
                 onClick = {
                     currentUser?.uid?.let { senderId ->
-                        // Acessando o método através da instância do viewModel
                         viewModel.sendFeedback(senderId, feedbackText)
-                        feedbackText = "" // Limpa o campo após o envio
+                        feedbackText = ""
                     }
                 },
                 modifier = Modifier.align(Alignment.End)
             ) {
+                Icon(Icons.Default.Send, contentDescription = "Enviar")
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("Enviar")
             }
         }

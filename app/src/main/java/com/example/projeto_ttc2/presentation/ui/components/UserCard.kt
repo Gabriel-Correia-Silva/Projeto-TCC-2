@@ -1,7 +1,9 @@
 package com.example.projeto_ttc2.presentation.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
@@ -10,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,11 +33,18 @@ fun UserCard(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
+    // Lógica simples de status (pode ser aprimorada com dados reais de alerta)
+    val statusColor = when {
+        heartRate > 120 -> Color.Red
+        steps < 2000 -> Color.Yellow
+        else -> Color.Green
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         onClick = { expanded = !expanded }
     ) {
         Column(
@@ -45,11 +55,20 @@ fun UserCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = user.name ?: "Usuário sem nome",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = user.name ?: "Usuário sem nome",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = if (expanded) "Recolher" else "Expandir"
@@ -64,13 +83,12 @@ fun UserCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             InfoItem("Passos do dia", steps.toString())
-                            InfoItem("Calorias", "%.2f".format(calories))
-                            InfoItem("Consumo de atividade", "$activity%")
+                            InfoItem("Calorias", "%.0f kcal".format(calories))
                         }
-                        Column(modifier = Modifier.weight(1f)) {
-                            InfoItem("Frequência", "${heartRate}bpm")
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            InfoItem("Frequência", if (heartRate > 0) "${heartRate}bpm" else "--")
                             InfoItem("Sono", sleep)
                         }
                     }
@@ -92,17 +110,17 @@ fun UserCard(
 
 @Composable
 private fun InfoItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+    Column {
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = Color.Gray
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
         Text(
             text = value,
-            fontSize = 16.sp,
+            style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

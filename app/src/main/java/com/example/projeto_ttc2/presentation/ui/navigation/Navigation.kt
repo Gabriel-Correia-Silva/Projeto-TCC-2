@@ -149,6 +149,39 @@ fun AppNavigation(
             }
 
             composable("login") {
+
+                LaunchedEffect(authState, userRole) {
+                    if (authState is AuthState.Authenticated) {
+
+                        val hasPermissions = healthConnectViewModel.hasAllPermissions()
+
+                        if (!hasPermissions){
+                            navController.navigate("permission_screen"){
+                                popUpTo("login"){inclusive = true}
+                            }
+                        }
+
+                        val destination = when (userRole) {
+                            is UserRole.Supervisor -> "supervisor_dashboard"
+                            is UserRole.Supervised -> "supervised_dashboard"
+                            else -> null
+                        }
+
+                        // Navega se o destino for válido
+                        if (destination != null) {
+                            navController.navigate(destination) {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    } else if (authState is AuthState.NeedsRegistration) {
+                        navController.navigate("registration") {
+                            popUpTo("login") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 LoginScreen(
                     authState = authState,
                     onSignInRequested = googleSignInLauncher,

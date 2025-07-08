@@ -34,11 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.projeto_ttc2.presentation.state.UserRole
 
 val TealColor = Color(0xFF4DB6AC)
 
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(
+    navController: NavController,
+    userRole: UserRole?
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,16 +52,19 @@ fun SettingsScreen(navController: NavController) {
         SettingsItem(icon = Icons.Default.Person, text = "Perfil") {
             navController.navigate("profile_screen")
         }
-        SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") {
+        if(userRole is UserRole.Supervised){
+                SettingsItem(icon = Icons.Default.VolumeUp, text = "Monitoramento noturno") {
             navController.navigate("night_monitoring_screen")
         }
-        SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") {
-            navController.navigate("emergency_contacts_screen")
-        }
+                SettingsItem(icon = Icons.Default.Call, text = "Contatos de emergência") {
+        navController.navigate("emergency_contacts_screen")
+    }
 
         SettingsItem(icon = Icons.Default.Sensors, text = "Metas e Alertas") {
             navController.navigate("sensors_settings_screen")
         }
+    }
+
         //SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
         //SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }
         SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO: Implementar logout */ }
@@ -93,5 +100,5 @@ fun SettingsItem(icon: ImageVector, text: String, onClick: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
-    SettingsScreen(navController = rememberNavController())
+    SettingsScreen(navController = rememberNavController(), userRole = UserRole.Supervisor)
 }

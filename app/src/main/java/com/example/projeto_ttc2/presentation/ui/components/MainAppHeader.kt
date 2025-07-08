@@ -3,6 +3,7 @@ package com.example.projeto_ttc2.presentation.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,12 +44,6 @@ fun MainAppHeader(
         },
         actions = {
             if (showIcons) {
-                IconButton(onClick = onSettingsClick) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Configurações"
-                    )
-                }
                 IconButton(onClick = onNotificationsClick) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
@@ -59,6 +54,12 @@ fun MainAppHeader(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                         contentDescription = "Sair"
+                    )
+                }
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Menu"
                     )
                 }
             }

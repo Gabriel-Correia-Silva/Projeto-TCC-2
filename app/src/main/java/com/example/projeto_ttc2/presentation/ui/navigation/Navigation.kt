@@ -49,7 +49,7 @@ fun AppNavigation(
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
     val userRole by authViewModel.userRole.collectAsStateWithLifecycle()
 
-    val userName = authViewModel.getCurrentUser()?.displayName?.split(" ")?.firstOrNull() ?: "Usuário"
+    val userName = authViewModel.getCurrentUser()?.displayName?.split(" ")?.firstOrNull() ?: "Utilizador"
 
     Scaffold(
         topBar = {
@@ -92,8 +92,7 @@ fun AppNavigation(
             }
         },
         floatingActionButton = {
-            val routesWithoutFab = listOf("splash_screen", "login", "registration", "permission_screen")
-            if (currentRoute !in routesWithoutFab) {
+            if (currentRoute == "supervised_dashboard") {
                 val primaryContact by emergencyContactViewModel.primaryContact.collectAsStateWithLifecycle()
                 FloatingActionButton(
                     onClick = {
@@ -123,15 +122,15 @@ fun AppNavigation(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "splash_screen",
+            startDestination = "initial_router",
             modifier = Modifier.padding(innerPadding)
         ) {
 
-            composable("splash_screen") {
-                SplashScreen(
+            composable("initial_router") {
+                InitialRouter(
+                    navController = navController,
                     authViewModel = authViewModel,
-                    healthConnectViewModel = healthConnectViewModel,
-                    navController = navController
+                    healthConnectViewModel = healthConnectViewModel
                 )
             }
 
@@ -139,8 +138,8 @@ fun AppNavigation(
                 val requestPermissionLauncher = rememberLauncherForActivityResult(
                     contract = PermissionController.createRequestPermissionResultContract()
                 ) {
-                    navController.navigate("splash_screen") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                    navController.navigate("initial_router") {
+                        popUpTo("permission_screen") { inclusive = true }
                     }
                 }
                 PermissionScreen(onContinueClick = {
@@ -149,39 +148,13 @@ fun AppNavigation(
             }
 
             composable("login") {
-
-                LaunchedEffect(authState, userRole) {
-                    if (authState is AuthState.Authenticated) {
-
-                        val hasPermissions = healthConnectViewModel.hasAllPermissions()
-
-                        if (!hasPermissions){
-                            navController.navigate("permission_screen"){
-                                popUpTo("login"){inclusive = true}
-                            }
-                        }
-
-                        val destination = when (userRole) {
-                            is UserRole.Supervisor -> "supervisor_dashboard"
-                            is UserRole.Supervised -> "supervised_dashboard"
-                            else -> null
-                        }
-
-                        // Navega se o destino for válido
-                        if (destination != null) {
-                            navController.navigate(destination) {
-                                popUpTo("login") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    } else if (authState is AuthState.NeedsRegistration) {
-                        navController.navigate("registration") {
+                LaunchedEffect(authState) {
+                    if (authState is AuthState.Authenticated || authState is AuthState.NeedsRegistration) {
+                        navController.navigate("initial_router") {
                             popUpTo("login") { inclusive = true }
-                            launchSingleTop = true
                         }
                     }
                 }
-
                 LoginScreen(
                     authState = authState,
                     onSignInRequested = googleSignInLauncher,
@@ -196,8 +169,8 @@ fun AppNavigation(
                         user = currentState.user,
                         onRegister = { name, role, supervisorId ->
                             authViewModel.registerUser(currentState.user, name, role, supervisorId)
-                            navController.navigate("splash_screen") {
-                                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            navController.navigate("initial_router") {
+                                popUpTo("registration") { inclusive = true }
                             }
                         }
                     )
@@ -213,7 +186,7 @@ fun AppNavigation(
                 val latestBpm by dashboardViewModel.latestHeartRate.collectAsStateWithLifecycle()
                 val todayHeartRateData by dashboardViewModel.todayHeartRateData.collectAsStateWithLifecycle()
                 val todaySteps by dashboardViewModel.todaySteps.collectAsStateWithLifecycle()
-                val stepGoal by dashboardViewModel.stepGoal.collectAsStateWithLifecycle() // Carrega a meta de passos
+                val stepGoal by dashboardViewModel.stepGoal.collectAsStateWithLifecycle()
                 val todayDistanceKm by dashboardViewModel.todayDistanceKm.collectAsStateWithLifecycle()
                 val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
                 val activeCalories by dashboardViewModel.todayActiveCalories.collectAsStateWithLifecycle()
@@ -245,7 +218,12 @@ fun AppNavigation(
 
             composable("professional_screen") { ProfessionalScreen() }
             composable("patient_detail/{patientId}") { PatientDetailScreen() }
-            composable("settings_screen") { SettingsScreen(navController = navController) }
+            composable("settings_screen") {
+                SettingsScreen(
+                    navController = navController,
+                    userRole = userRole
+                )
+            }
             composable("sensors_settings_screen") { SensorsSettingsScreen() }
             composable("feedback_list_screen") { FeedbackListScreen() }
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
@@ -270,7 +248,7 @@ fun AppNavigation(
                         }
                     }
                     is ProfileState.Success, is ProfileState.UpdateSuccess -> {
-                        val user = if (state is ProfileState.Success) state.user else (profileState as? ProfileState.Success)?.user
+                        val user = if (state is ProfileState.Success) state.user else null
                         if (user != null) {
                             ProfileScreen(
                                 profileState = state,
@@ -308,29 +286,32 @@ fun AppNavigation(
     }
 }
 
+
 @Composable
-fun SplashScreen(
+fun InitialRouter(
+    navController: NavController,
     authViewModel: AuthViewModel,
-    healthConnectViewModel: HealthConnectViewModel,
-    navController: NavController
+    healthConnectViewModel: HealthConnectViewModel
 ) {
+
     LaunchedEffect(key1 = Unit) {
         val currentUser = authViewModel.getCurrentUser()
+
         if (currentUser == null) {
-            navController.navigate("login") { popUpTo("splash_screen") { inclusive = true } }
+            navController.navigate("login") { popUpTo("initial_router") { inclusive = true } }
             return@LaunchedEffect
         }
 
         val authStateResult = authViewModel.checkUserRegistrationBlocking(currentUser.uid)
         if (authStateResult is AuthState.NeedsRegistration) {
             (authViewModel.authState as MutableStateFlow).value = authStateResult
-            navController.navigate("registration") { popUpTo("splash_screen") { inclusive = true } }
+            navController.navigate("registration") { popUpTo("initial_router") { inclusive = true } }
             return@LaunchedEffect
         }
 
         val hasPermissions = healthConnectViewModel.hasAllPermissions()
         if (!hasPermissions) {
-            navController.navigate("permission_screen") { popUpTo("splash_screen") { inclusive = true } }
+            navController.navigate("permission_screen") { popUpTo("initial_router") { inclusive = true } }
             return@LaunchedEffect
         }
 
@@ -342,7 +323,7 @@ fun SplashScreen(
         }
 
         navController.navigate(destination) {
-            popUpTo("splash_screen") { inclusive = true }
+            popUpTo("initial_router") { inclusive = true }
         }
     }
 
@@ -353,6 +334,6 @@ fun SplashScreen(
     ) {
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(16.dp))
-        Text("A verificar o seu estado...")
+        Text("A carregar...")
     }
 }

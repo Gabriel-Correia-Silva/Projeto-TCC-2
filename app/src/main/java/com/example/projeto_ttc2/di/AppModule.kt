@@ -51,6 +51,9 @@ object AppModule {
     fun provideOxigenacaoSanguineaDao(appDatabase: AppDatabase): OxigenacaoSanguineaDao = appDatabase.oxigenacaoSanguineaDao()
 
     @Provides
+    fun provideSleepStageDao(appDatabase: AppDatabase): SleepStageDao = appDatabase.sleepStageDao()
+
+    @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
@@ -115,11 +118,12 @@ object AppModule {
     @Singleton
     fun provideSleepRepository(
         sonoDao: SonoDao,
+        sleepStageDao: SleepStageDao,
         healthConnectManager: HealthConnectManager,
         firebaseAuth: FirebaseAuth,
         firebaseHealthDataRepository: FirebaseHealthDataRepository
     ): SleepRepository {
-        return SleepRepository(sonoDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
+        return SleepRepository(sonoDao, sleepStageDao, healthConnectManager, firebaseAuth, firebaseHealthDataRepository)
     }
 
     @Provides

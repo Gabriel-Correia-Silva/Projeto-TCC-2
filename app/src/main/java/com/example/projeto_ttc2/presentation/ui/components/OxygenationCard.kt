@@ -25,8 +25,25 @@ fun OxygenationCard(
     historicalSpo2: List<Double> = emptyList(),
     cardColor: Color = TealGreen
 ) {
+    val statusText: String
+    val statusColor: Color
+
+    when {
+        spo2 >= 95 -> {
+            statusText = "Normal"
+        }
+        spo2 >= 90 -> {
+            statusText = "Atenção"
+        }
+        spo2 > 0 -> {
+            statusText = "Baixo"
+        }
+        else -> {
+            statusText = "Sem dados"
+        }
+    }
+
     DashboardCard(
-        cardColor = cardColor
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -35,7 +52,7 @@ fun OxygenationCard(
                 tint = Color.White
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Oxigenação", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("SpO2", color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -66,12 +83,18 @@ fun OxygenationCard(
                         modifier = Modifier.padding(start = 2.dp, bottom = 6.dp)
                     )
                 }
+                Text(
+                    text = statusText,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             if (historicalSpo2.isNotEmpty()) {
                 OxygenationBarChart(
                     data = historicalSpo2,
-                    modifier = Modifier.height(60.dp).fillMaxWidth(0.9f)
+                    modifier = Modifier.height(60.dp).fillMaxWidth(0.6f)
                 )
             }
         }
@@ -84,27 +107,28 @@ fun OxygenationBarChart(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val barColor = Color.White
+    val barColor = Color.White.copy(alpha = 0.8f)
 
-    val fixedBarHeight = with(density) { 30.dp.toPx() }
-    val maxBarWidth = with(density) { 8.dp.toPx() }
+    val maxSpo2 = 100.0
+    val minSpo2 = (data.minOrNull() ?: 85.0).coerceAtMost(85.0)
+    val range = (maxSpo2 - minSpo2).coerceAtLeast(1.0)
 
     Canvas(modifier = modifier) {
         if (data.isEmpty()) return@Canvas
 
-        val dynamicChartWidth = (size.width / 7) * data.size
-
-        val barWidthWithSpacing = dynamicChartWidth / data.size
-        val barWidth = (barWidthWithSpacing * 0.5f).coerceAtMost(maxBarWidth)
+        val barWidthWithSpacing = size.width / data.size
+        val barWidth = barWidthWithSpacing * 0.5f
 
         data.forEachIndexed { index, value ->
-            val x = barWidthWithSpacing * index
+            val normalizedValue = ((value - minSpo2) / range).coerceIn(0.0, 1.0)
+            val barHeight = (size.height * normalizedValue).toFloat()
+            val x = barWidthWithSpacing * index + (barWidthWithSpacing - barWidth) / 2
 
             if (value > 0) {
                 drawRect(
                     color = barColor,
-                    topLeft = Offset(x, size.height - fixedBarHeight),
-                    size = Size(barWidth, fixedBarHeight)
+                    topLeft = Offset(x, size.height - barHeight),
+                    size = Size(barWidth, barHeight)
                 )
             }
         }

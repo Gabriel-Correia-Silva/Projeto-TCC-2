@@ -229,8 +229,10 @@ fun AppNavigation(
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
 
             composable("sleep_screen") {
-                val sleepSession by dashboardViewModel.latestSleepSession.collectAsStateWithLifecycle()
-                SleepScreen(navController = navController, sleepData = sleepSession)
+                SleepScreen(
+                    navController = navController,
+                    dashboardViewModel = dashboardViewModel
+                )
             }
 
             composable("night_monitoring_screen") { NightMonitoringScreen(navController = navController) }
@@ -252,7 +254,6 @@ fun AppNavigation(
                         if (user != null) {
                             ProfileScreen(
                                 profileState = state,
-                                // --- CHAMADA MODIFICADA ---
                                 onSaveProfile = { fullName, birthDate ->
                                     profileViewModel.saveProfile(fullName, birthDate)
                                 },
@@ -295,13 +296,11 @@ fun InitialRouter(
 ) {
     LaunchedEffect(key1 = Unit) {
         val currentUser = authViewModel.getCurrentUser()
-        // 1. O utilizador está logado?
         if (currentUser == null) {
             navController.navigate("login") { popUpTo("initial_router") { inclusive = true } }
             return@LaunchedEffect
         }
 
-        // 2. O utilizador precisa de se registar?
         val authStateResult = authViewModel.checkUserRegistrationBlocking(currentUser.uid)
         if (authStateResult is AuthState.NeedsRegistration) {
             (authViewModel.authState as MutableStateFlow).value = authStateResult
@@ -309,31 +308,25 @@ fun InitialRouter(
             return@LaunchedEffect
         }
 
-        // --- LÓGICA DE NAVEGAÇÃO BASEADA NA FUNÇÃO ---
         val userRole = authViewModel.userRole.value
         when (userRole) {
-            // 3. Se for SUPERVISOR, vai direto para o dashboard dele.
             is UserRole.Supervisor -> {
                 navController.navigate("supervisor_dashboard") {
                     popUpTo("initial_router") { inclusive = true }
                 }
             }
-            // 4. Se for SUPERVISIONADO, verifica as permissões.
             is UserRole.Supervised -> {
                 val hasPermissions = healthConnectViewModel.hasAllPermissions()
                 if (!hasPermissions) {
-                    // Se não tiver permissões, vai para a tela de permissões.
                     navController.navigate("permission_screen") {
                         popUpTo("initial_router") { inclusive = true }
                     }
                 } else {
-                    // Se tiver permissões, vai para o dashboard dele.
                     navController.navigate("supervised_dashboard") {
                         popUpTo("initial_router") { inclusive = true }
                     }
                 }
             }
-            // 5. Caso a função seja desconhecida, volta para o login por segurança.
             else -> {
                 navController.navigate("login") {
                     popUpTo("initial_router") { inclusive = true }
@@ -342,7 +335,6 @@ fun InitialRouter(
         }
     }
 
-    // Mostra um indicador de progresso enquanto a lógica acima é executada
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,

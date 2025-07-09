@@ -16,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -24,17 +26,25 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.projeto_ttc2.database.entities.SleepStage
 import com.example.projeto_ttc2.database.entities.Sono
-import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
-import com.example.projeto_ttc2.presentation.ui.theme.LightTeal
 import com.example.projeto_ttc2.presentation.ui.theme.DarkText
+import com.example.projeto_ttc2.presentation.ui.theme.LightTeal
+import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
+import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
+import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.atan2
 
-// Cores seguindo o padrão do theme
+// Cores
 private val DarkTeal = DarkText
 private val MediumTeal = TealGreen
 private val AppLightTeal = LightTeal
@@ -50,12 +60,19 @@ internal data class SleepSlice(
 )
 
 @Composable
-fun SleepScreen(navController: NavController, sleepData: Sono?) {
-    val allSlices = remember(sleepData) {
-        val deepMinutes = sleepData?.deepSleepDurationMinutes?.toFloat() ?: 0f
-        val remMinutes = sleepData?.remSleepDurationMinutes?.toFloat() ?: 0f
-        val lightMinutes = sleepData?.lightSleepDurationMinutes?.toFloat() ?: 0f
-        val awakeMinutes = sleepData?.awakeDurationMinutes?.toFloat() ?: 0f
+fun SleepScreen(
+    navController: NavController,
+    dashboardViewModel: DashboardViewModel
+) {
+    val sleepSessionWithStages by dashboardViewModel.latestSleepSessionWithStages.collectAsStateWithLifecycle()
+    val sono = sleepSessionWithStages?.sono
+    val stages = sleepSessionWithStages?.stages ?: emptyList()
+
+    val allSlices = remember(sono) {
+        val deepMinutes = sono?.deepSleepDurationMinutes?.toFloat() ?: 0f
+        val remMinutes = sono?.remSleepDurationMinutes?.toFloat() ?: 0f
+        val lightMinutes = sono?.lightSleepDurationMinutes?.toFloat() ?: 0f
+        val awakeMinutes = sono?.awakeDurationMinutes?.toFloat() ?: 0f
         val totalSleep = (deepMinutes + remMinutes + lightMinutes + awakeMinutes).coerceAtLeast(1f)
 
         listOf(
@@ -67,7 +84,7 @@ fun SleepScreen(navController: NavController, sleepData: Sono?) {
     }
 
     var selectedSlice by remember(allSlices) {
-        mutableStateOf(allSlices.firstOrNull())
+        mutableStateOf(allSlices.firstOrNull { it.proportion > 0 })
     }
 
     Column(
@@ -78,14 +95,15 @@ fun SleepScreen(navController: NavController, sleepData: Sono?) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        SleepSummaryCard(sleepData = sleepData)
+        SleepSummaryCard(sleepData = sono, stages = stages)
 
+        // Gráfico Donut
         SleepDonutChart(
             drawableSlices = allSlices.filter { it.proportion > 0 },
             allSlices = allSlices,
             selectedSlice = selectedSlice,
             onSliceSelected = { slice -> selectedSlice = slice },
-            modifier = Modifier.padding(vertical = 32.dp, horizontal = 16.dp)
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 16.dp)
         )
 
         SleepLegend(
@@ -93,11 +111,13 @@ fun SleepScreen(navController: NavController, sleepData: Sono?) {
             selectedSlice = selectedSlice,
             onItemClick = { slice -> selectedSlice = slice }
         )
+
+
     }
 }
 
 @Composable
-fun SleepSummaryCard(sleepData: Sono?) {
+fun SleepSummaryCard(sleepData: Sono?, stages: List<SleepStage>) {
     fun formatDuration(minutes: Long?): String {
         if (minutes == null || minutes <= 0) return "--"
         val hours = minutes / 60
@@ -125,7 +145,13 @@ fun SleepSummaryCard(sleepData: Sono?) {
                 )
             }
 
-            SleepBarChart(sleepData = sleepData)
+            if (stages.isNotEmpty() && sleepData != null) {
+                SleepTimelineBar(
+                    stages = stages,
+                    startTime = sleepData.startTime,
+                    endTime = sleepData.endTime
+                )
+            }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -159,31 +185,32 @@ fun SleepSummaryCard(sleepData: Sono?) {
 }
 
 @Composable
-fun SleepBarChart(sleepData: Sono?) {
-    data class SleepPhase(val duration: Float, val color: Color)
-    val deep = sleepData?.deepSleepDurationMinutes?.toFloat() ?: 0f
-    val light = sleepData?.lightSleepDurationMinutes?.toFloat() ?: 0f
-    val rem = sleepData?.remSleepDurationMinutes?.toFloat() ?: 0f
-    val awake = sleepData?.awakeDurationMinutes?.toFloat() ?: 0f
-
-    val validPhases = listOf(
-        SleepPhase(deep, DarkTeal),
-        SleepPhase(light, AppLightTeal),
-        SleepPhase(rem, LightBlue),
-        SleepPhase(awake, AwakeGray)
-    ).filter { it.duration > 0f }
+fun SleepTimelineBar(
+    stages: List<SleepStage>,
+    startTime: Instant,
+    endTime: Instant,
+    modifier: Modifier = Modifier
+) {
+    val totalDuration = Duration.between(startTime, endTime).toMillis().coerceAtLeast(1)
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(24.dp)
             .clip(RoundedCornerShape(12.dp))
     ) {
-        if (validPhases.isEmpty()) {
+        if (stages.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Gray))
         } else {
-            validPhases.forEach { phase ->
-                Box(modifier = Modifier.weight(phase.duration).fillMaxHeight().background(phase.color))
+            stages.forEach { stage ->
+                val stageDuration = Duration.between(stage.startTime, stage.endTime).toMillis()
+                val weight = stageDuration.toFloat() / totalDuration
+                Box(
+                    modifier = Modifier
+                        .weight(weight)
+                        .fillMaxHeight()
+                        .background(getSleepStageColor(stage.type))
+                )
             }
         }
     }
@@ -217,7 +244,13 @@ internal fun SleepDonutChart(
                     val centerX = size.width / 2f
                     val centerY = size.height / 2f
                     val touchAngle = Math.toDegrees(atan2((offset.y - centerY).toDouble(), (offset.x - centerX).toDouble())).toFloat()
-                    val slice = slicesToDraw.find { touchAngle in it.startAngle..it.endAngle }
+                    // Normalize angle
+                    val normalizedAngle = (touchAngle + 360) % 360
+                    val slice = slicesToDraw.find {
+                        val start = (it.startAngle + 360) % 360
+                        val end = (it.endAngle + 360) % 360
+                        if (start <= end) normalizedAngle in start..end else normalizedAngle >= start || normalizedAngle <= end
+                    }
                     if (slice != null) {
                         onSliceSelected(slice)
                     }
@@ -268,13 +301,13 @@ internal fun SleepLegend(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         maxItemsInEachRow = 2
     ) {
-        allSlices.forEach { slice ->
+        allSlices.filter { it.proportion > 0 }.forEach { slice ->
             LegendItem(
                 color = slice.color,
                 text = slice.label,
                 isSelected = slice.label == selectedSlice?.label,
                 modifier = Modifier
-                    .weight(1f)
+                    .padding(horizontal = 4.dp)
                     .clickable(
                         role = Role.Button,
                         onClickLabel = "Selecionar ${slice.label}"
@@ -294,12 +327,11 @@ fun LegendItem(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
             .background(
                 color = if (isSelected) color.copy(alpha = 0.2f) else Color.Transparent,
                 shape = RoundedCornerShape(8.dp)
             )
-            .padding(4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Box(
             modifier = Modifier
@@ -317,19 +349,67 @@ fun LegendItem(
     }
 }
 
+
+@Composable
+fun SleepTimelineChart(
+    stages: List<SleepStage>,
+    startTime: Instant,
+    endTime: Instant,
+    modifier: Modifier = Modifier
+) {
+    val totalDurationMillis = Duration.between(startTime, endTime).toMillis().coerceAtLeast(1)
+    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Canvas(modifier = Modifier.fillMaxWidth().height(50.dp)) {
+            stages.forEach { stage ->
+                val stageStartMillis = Duration.between(startTime, stage.startTime).toMillis()
+                val stageDurationMillis = Duration.between(stage.startTime, stage.endTime).toMillis()
+
+                val startX = (stageStartMillis.toFloat() / totalDurationMillis) * size.width
+                val barWidth = (stageDurationMillis.toFloat() / totalDurationMillis) * size.width
+
+                drawRect(
+                    color = getSleepStageColor(stage.type),
+                    topLeft = Offset(x = startX, y = 0f),
+                    size = Size(width = barWidth, height = size.height)
+                )
+            }
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(timeFormatter.format(startTime), style = MaterialTheme.typography.labelSmall)
+            Text(timeFormatter.format(endTime), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+
+fun getSleepStageColor(stageType: Int): Color {
+    return when (stageType) {
+        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> AwakeGray
+        SleepSessionRecord.STAGE_TYPE_DEEP -> DarkTeal
+        SleepSessionRecord.STAGE_TYPE_LIGHT -> AppLightTeal
+        SleepSessionRecord.STAGE_TYPE_REM -> LightBlue
+        else -> Color.Gray
+    }
+}
+
 @Preview(showBackground = true, device = "id:pixel_6")
 @Composable
 fun SleepScreenPreview() {
-    val previewSleepData = Sono(
-        healthConnectId = "preview_id",
-        startTime = Instant.now().minus(8, ChronoUnit.HOURS),
-        endTime = Instant.now(),
-        durationMinutes = 452,
+    val now = Instant.now()
+    val sono = Sono(
+        startTime = now.minus(8, ChronoUnit.HOURS),
+        endTime = now,
+        durationMinutes = 480,
         deepSleepDurationMinutes = 120,
         lightSleepDurationMinutes = 240,
         remSleepDurationMinutes = 70,
-        awakeDurationMinutes = 0,
-        userId = "preview_user" 
+        awakeDurationMinutes = 50
     )
-    SleepScreen(navController = rememberNavController(), sleepData = previewSleepData)
+
+    MaterialTheme {
+        SleepScreen(navController = rememberNavController(), dashboardViewModel = hiltViewModel())
+    }
 }

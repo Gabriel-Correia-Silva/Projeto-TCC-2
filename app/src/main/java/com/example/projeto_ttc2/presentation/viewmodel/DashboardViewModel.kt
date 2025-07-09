@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
+import com.example.projeto_ttc2.database.entities.SonoWithStages
 import com.example.projeto_ttc2.database.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -153,6 +154,10 @@ class DashboardViewModel @Inject constructor(
 
     val latestSleepSession: StateFlow<Sono?> = sleepRepository.getLatestSleepSession()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val latestSleepSessionWithStages: StateFlow<SonoWithStages?> = sleepRepository.getLatestSleepSessionWithStages()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
 
     val todayActiveCalories: StateFlow<Double> = caloriesRepository.getTodayActiveCalories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)

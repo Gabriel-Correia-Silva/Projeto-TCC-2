@@ -65,8 +65,6 @@ fun SupervisorDashboardScreen(
                         heartRate = summary.heartRate,
                         sleep = "${summary.sleep / 60}h ${summary.sleep % 60}m",
                         calories = summary.calories,
-
-                        activity = 75,
                         onDetailsClick = {
                             navController.navigate("patient_detail/${user.id}")
                         }
@@ -76,6 +74,7 @@ fun SupervisorDashboardScreen(
         }
     }
 }
+
 
 @Composable
 fun EmptySupervisedList() {

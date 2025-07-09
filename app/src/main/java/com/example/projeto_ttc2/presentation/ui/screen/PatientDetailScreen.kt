@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,12 +31,19 @@ import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.Calorias
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
-import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
+import com.example.projeto_ttc2.database.entities.User
+import com.example.projeto_ttc2.presentation.ui.components.HeartRateBarChart
+import com.example.projeto_ttc2.presentation.ui.components.InteractiveBarChart
+import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
+import com.example.projeto_ttc2.presentation.ui.theme.caloriesCard
+import com.example.projeto_ttc2.presentation.ui.theme.heartRateCard
+import com.example.projeto_ttc2.presentation.ui.theme.sleepCard
+import com.example.projeto_ttc2.presentation.ui.theme.stepsCard
 import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
 import com.example.projeto_ttc2.presentation.viewmodel.PatientDetailViewModel
 import java.time.LocalDate
 import java.time.format.TextStyle
-import java.util.Locale
+import java.util.*
 
 @Composable
 fun PatientDetailScreen(
@@ -46,46 +54,82 @@ fun PatientDetailScreen(
     val stepsData by viewModel.stepsData.collectAsStateWithLifecycle()
     val heartRateData by viewModel.heartRateData.collectAsStateWithLifecycle()
     val sleepData by viewModel.sleepData.collectAsStateWithLifecycle()
-    // ADICIONADO: Recolher o estado das calorias
+    // 1. Coletar o estado das calorias e do feedback
     val caloriesData by viewModel.caloriesData.collectAsStateWithLifecycle()
+    val feedbackState by viewModel.feedbackState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
 
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("Visão Geral", "Passos", "Frequência", "Sono")
+    val tabs = listOf("Visão Geral", "Passos", "Frequência", "Sono", "Alertas")
 
-    val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        // Cabeçalho do Paciente
-        PatientHeader(patient = patient)
-
-        // Abas de Navegação
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(title, fontWeight = if(selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal) }
-                )
+    // Efeito para exibir snackbar em caso de sucesso ou erro no envio do feedback
+    LaunchedEffect(feedbackState) {
+        when (val state = feedbackState) {
+            is PatientDetailViewModel.FeedbackState.Success -> {
+                snackbarHostState.showSnackbar("Feedback enviado com sucesso!")
+                viewModel.resetFeedbackState()
             }
+            is PatientDetailViewModel.FeedbackState.Error -> {
+                snackbarHostState.showSnackbar("Erro ao enviar feedback: ${state.message}")
+                viewModel.resetFeedbackState()
+            }
+            else -> {}
         }
+    }
 
-        // Conteúdo da Aba
-        Box(modifier = Modifier.padding(16.dp)) {
-            when (selectedTabIndex) {
-                // MODIFICADO: Passar os dados de calorias
-                0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData, caloriesData)
-                1 -> StepsTab(stepsData)
-                2 -> HeartRateTab(heartRateData)
-                3 -> SleepTab(sleepData)
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            PatientHeader(patient = patient)
+
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title, fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal) }
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.padding(16.dp)) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            // 2. Passar os dados dinâmicos para a OverviewTab
+                            OverviewTab(
+                                viewModel = viewModel,
+                                authViewModel = authViewModel,
+                                stepsData = stepsData,
+                                heartRateData = heartRateData,
+                                sleepData = sleepData,
+                                caloriesData = caloriesData, // Passa os dados de calorias
+                                feedbackState = feedbackState // Passa o estado do feedback
+                            )
+                        }
+                    }
+                    1 -> StepsTab(stepsData)
+                    2 -> HeartRateTab(heartRateData)
+                    3 -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            SleepTab(sleepData)
+                        }
+                    }
+                    // 3. Deixamos claro que a tela de alertas ainda usa dados estáticos
+                    4 -> FallHistoryScreen() // ATENÇÃO: Esta tela ainda usa dados estáticos.
+                }
             }
         }
     }
@@ -93,7 +137,7 @@ fun PatientDetailScreen(
 
 
 @Composable
-fun PatientHeader(patient: com.example.projeto_ttc2.database.entities.User?) {
+fun PatientHeader(patient: User?) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -138,23 +182,22 @@ fun PatientHeader(patient: com.example.projeto_ttc2.database.entities.User?) {
     }
 }
 
-
 @Composable
 fun OverviewTab(
     viewModel: PatientDetailViewModel,
     authViewModel: AuthViewModel,
-    steps: List<Passos>,
-    heartRate: List<BatimentoCardiaco>,
-    sleep: List<Sono>,
-    // ADICIONADO: Receber a lista de calorias
-    calories: List<Calorias>
+    stepsData: List<Passos>,
+    heartRateData: List<BatimentoCardiaco>,
+    sleepData: List<Sono>,
+    caloriesData: List<Calorias>, // Recebe os dados de calorias
+    feedbackState: PatientDetailViewModel.FeedbackState // Recebe o estado do feedback
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        val lastHeartRate = heartRate.maxByOrNull { it.timestamp }
-        val todaySteps = steps.find { it.data == LocalDate.now().toString() }?.contagem ?: 0L
-        val lastSleep = sleep.maxByOrNull { it.endTime }
-        // ADICIONADO: Obter a última leitura de calorias
-        val lastCalories = calories.maxByOrNull { it.endTime }?.kilocalorias
+        val lastHeartRate = heartRateData.maxByOrNull { it.timestamp }
+        val todaySteps = stepsData.find { it.data == LocalDate.now().toString() }?.contagem ?: 0L
+        val lastSleep = sleepData.maxByOrNull { it.endTime }
+        // 4. Calcular a última caloria registrada
+        val lastCalories = caloriesData.filter { it.tipo == "TOTAL" }.maxByOrNull { it.endTime }?.kilocalorias ?: 0.0
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SummaryCard(
@@ -162,7 +205,8 @@ fun OverviewTab(
                 label = "Passos Hoje",
                 value = todaySteps.toString(),
                 modifier = Modifier.weight(1f),
-                color = Color(0xFF64B5F6) // StepsBlue
+                // 5. Utilizar cores do tema
+                color = MaterialTheme.colorScheme.stepsCard
             )
             SummaryCard(
                 icon = Icons.Default.FavoriteBorder,
@@ -170,7 +214,7 @@ fun OverviewTab(
                 value = lastHeartRate?.bpm?.toString() ?: "--",
                 unit = if (lastHeartRate != null) "bpm" else null,
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFE57373) // HeartRateRed
+                color = MaterialTheme.colorScheme.heartRateCard
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -181,24 +225,24 @@ fun OverviewTab(
                 label = "Último Sono",
                 value = if (lastSleep != null) "${sleepHours}h ${sleepMinutes}m" else "--",
                 modifier = Modifier.weight(1f),
-                color = Color(0xFF81C784) // SleepGreen
+                color = MaterialTheme.colorScheme.sleepCard
             )
             SummaryCard(
                 icon = Icons.Default.LocalFireDepartment,
                 label = "Calorias",
-                // MODIFICADO: Exibir o valor real das calorias
-                value = if (lastCalories != null) "%.0f".format(lastCalories) else "--",
+                // 6. Exibir o valor dinâmico de calorias
+                value = if (lastCalories > 0) "%.0f".format(lastCalories) else "--",
                 unit = "kcal",
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFFFB74D) // CaloriesOrange
+                color = MaterialTheme.colorScheme.caloriesCard
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        FeedbackInputCard(viewModel, authViewModel)
+        // 7. Passar o estado de feedback para o componente de input
+        FeedbackInputCard(viewModel, authViewModel, feedbackState)
     }
 }
 
-// ... (Resto do código do PatientDetailScreen.kt sem alterações)
 @Composable
 fun StepsTab(stepsData: List<Passos>) {
     if (stepsData.isEmpty()) {
@@ -207,7 +251,7 @@ fun StepsTab(stepsData: List<Passos>) {
     }
 
     val chartData = remember(stepsData) {
-        stepsData.map {
+        stepsData.takeLast(7).map {
             val date = LocalDate.parse(it.data)
             BarData(
                 value = it.contagem.toFloat(),
@@ -235,7 +279,7 @@ fun HeartRateTab(heartRateData: List<BatimentoCardiaco>) {
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Batimentos Hoje", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+        Text("Variação de Batimentos (Hoje)", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
         HeartRateBarChart(
             data = heartRateData,
             modifier = Modifier
@@ -265,7 +309,7 @@ fun SleepTab(sleepData: List<Sono>) {
 
 @Composable
 fun SleepInfoRow(label: String, minutes: Long?) {
-    val durationText = if (minutes != null) {
+    val durationText = if (minutes != null && minutes > 0) {
         "${minutes / 60}h ${minutes % 60}m"
     } else {
         "--"
@@ -275,15 +319,17 @@ fun SleepInfoRow(label: String, minutes: Long?) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, fontWeight = FontWeight.Medium)
             Text(durationText, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         }
     }
 }
-
 
 @Composable
 fun SummaryCard(
@@ -292,17 +338,19 @@ fun SummaryCard(
     value: String,
     unit: String? = null,
     modifier: Modifier = Modifier,
-    color: Color = TealGreen
+    color: Color
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(150.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = color)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
                 imageVector = icon,
@@ -310,21 +358,23 @@ fun SummaryCard(
                 modifier = Modifier.size(32.dp),
                 tint = Color.White
             )
-            Text(label, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = value,
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                unit?.let {
+            Column {
+                Text(label, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = " $it",
+                        text = value,
                         color = Color.White,
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
                     )
+                    unit?.let {
+                        Text(
+                            text = " $it",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -339,14 +389,24 @@ fun EmptyContentState(message: String) {
             .height(300.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = message, color = Color.Gray, textAlign = TextAlign.Center)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Sem dados",
+                tint = Color.Gray,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = message, color = Color.Gray, textAlign = TextAlign.Center)
+        }
     }
 }
 
 @Composable
 fun FeedbackInputCard(
     viewModel: PatientDetailViewModel,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    feedbackState: PatientDetailViewModel.FeedbackState // Recebe o estado
 ) {
     var feedbackText by remember { mutableStateOf("") }
     val currentUser = authViewModel.getCurrentUser()
@@ -375,12 +435,73 @@ fun FeedbackInputCard(
                         feedbackText = ""
                     }
                 },
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier.align(Alignment.End),
+                // 8. Desabilitar o botão enquanto o feedback estiver sendo enviado
+                enabled = feedbackText.isNotBlank() && feedbackState != PatientDetailViewModel.FeedbackState.Loading
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Enviar")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Enviar")
+                // 9. Mostrar um indicador de progresso
+                if (feedbackState == PatientDetailViewModel.FeedbackState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.Default.Send, contentDescription = "Enviar")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Enviar")
+                }
             }
         }
     }
 }
+
+//=============== PREVIEWS ===============//
+
+//=============== PREVIEWS ===============//
+
+@Preview(showBackground = true)
+@Composable
+private fun PatientHeaderPreview() {
+    ProjetoTTC2Theme {
+        PatientHeader(patient = User(id = "2", name = "Maria Oliveira", email = "maria@example.com"))
+    }
+}
+
+/*@Preview(showBackground = true)
+@Composable
+private fun SummaryCardPreview() {
+    ProjetoTTC2Theme {
+        SummaryCard(
+            icon = Icons.Default.DirectionsWalk,
+            label = "Passos Hoje",
+            value = "8,456",
+            modifier = Modifier.width(180.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SleepInfoRowPreview() {
+    ProjetoTTC2Theme {
+        SleepInfoRow("Sono Profundo", 125)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun EmptyContentStatePreview() {
+    ProjetoTTC2Theme {
+        EmptyContentState(message = "Nenhum dado para exibir.")
+    }
+}
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun PatientDetailScreenPreview() {
+    ProjetoTTC2Theme {
+        Surface {
+            PatientDetailScreen()
+        }
+    }
+}*/

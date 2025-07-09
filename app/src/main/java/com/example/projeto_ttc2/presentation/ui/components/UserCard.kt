@@ -15,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projeto_ttc2.database.entities.User
+import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
 import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,7 +30,6 @@ fun UserCard(
     calories: Double,
     heartRate: Long,
     sleep: String,
-    activity: Int,
     onDetailsClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -36,8 +37,8 @@ fun UserCard(
     // Lógica simples de status (pode ser aprimorada com dados reais de alerta)
     val statusColor = when {
         heartRate > 120 -> Color.Red
-        steps < 2000 -> Color.Yellow
-        else -> Color.Green
+        steps < 2000 -> Color(0xFFFBC02D) // Amarelo
+        else -> Color(0xFF7CB342) // Verde
     }
 
     Card(
@@ -121,6 +122,21 @@ private fun InfoItem(label: String, value: String) {
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun UserCardPreview() {
+    ProjetoTTC2Theme {
+        UserCard(
+            user = User(id = "1", name = "João da Silva"),
+            steps = 7543,
+            calories = 345.6,
+            heartRate = 82,
+            sleep = "7h 15m",
+            onDetailsClick = {}
         )
     }
 }

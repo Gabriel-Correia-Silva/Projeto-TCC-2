@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.entities.Calorias
 import com.example.projeto_ttc2.database.entities.Feedback
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
@@ -23,6 +24,7 @@ class PatientDetailViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val healthDataRepository: FirebaseHealthDataRepository,
     private val feedbackRepository: FeedbackRepository,
+
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -40,6 +42,9 @@ class PatientDetailViewModel @Inject constructor(
     private val _sleepData = MutableStateFlow<List<Sono>>(emptyList())
     val sleepData: StateFlow<List<Sono>> = _sleepData.asStateFlow()
 
+    private val _caloriesData = MutableStateFlow<List<Calorias>>(emptyList())
+    val caloriesData: StateFlow<List<Calorias>> = _caloriesData.asStateFlow()
+
     init {
         loadAllData()
     }
@@ -50,8 +55,10 @@ class PatientDetailViewModel @Inject constructor(
             healthDataRepository.getUserStepsData(patientId).collect { _stepsData.value = it }
             healthDataRepository.getAllHeartRateData(patientId).collect { _heartRateData.value = it }
             healthDataRepository.getUserSleepData(patientId).collect { _sleepData.value = it }
+            healthDataRepository.getUserCaloriesData(patientId).collect { _caloriesData.value = it }
         }
     }
+
 
     fun sendFeedback(senderId: String, message: String) {
         if (message.isBlank()) return

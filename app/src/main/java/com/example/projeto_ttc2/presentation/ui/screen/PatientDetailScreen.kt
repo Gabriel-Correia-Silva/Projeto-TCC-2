@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.projeto_ttc2.R
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
+import com.example.projeto_ttc2.database.entities.Calorias
 import com.example.projeto_ttc2.database.entities.Passos
 import com.example.projeto_ttc2.database.entities.Sono
 import com.example.projeto_ttc2.presentation.ui.theme.TealGreen
@@ -45,6 +46,8 @@ fun PatientDetailScreen(
     val stepsData by viewModel.stepsData.collectAsStateWithLifecycle()
     val heartRateData by viewModel.heartRateData.collectAsStateWithLifecycle()
     val sleepData by viewModel.sleepData.collectAsStateWithLifecycle()
+    // ADICIONADO: Recolher o estado das calorias
+    val caloriesData by viewModel.caloriesData.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Visão Geral", "Passos", "Frequência", "Sono")
@@ -78,7 +81,8 @@ fun PatientDetailScreen(
         // Conteúdo da Aba
         Box(modifier = Modifier.padding(16.dp)) {
             when (selectedTabIndex) {
-                0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData)
+                // MODIFICADO: Passar os dados de calorias
+                0 -> OverviewTab(viewModel, authViewModel, stepsData, heartRateData, sleepData, caloriesData)
                 1 -> StepsTab(stepsData)
                 2 -> HeartRateTab(heartRateData)
                 3 -> SleepTab(sleepData)
@@ -86,6 +90,7 @@ fun PatientDetailScreen(
         }
     }
 }
+
 
 @Composable
 fun PatientHeader(patient: com.example.projeto_ttc2.database.entities.User?) {
@@ -140,12 +145,16 @@ fun OverviewTab(
     authViewModel: AuthViewModel,
     steps: List<Passos>,
     heartRate: List<BatimentoCardiaco>,
-    sleep: List<Sono>
+    sleep: List<Sono>,
+    // ADICIONADO: Receber a lista de calorias
+    calories: List<Calorias>
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val lastHeartRate = heartRate.maxByOrNull { it.timestamp }
         val todaySteps = steps.find { it.data == LocalDate.now().toString() }?.contagem ?: 0L
         val lastSleep = sleep.maxByOrNull { it.endTime }
+        // ADICIONADO: Obter a última leitura de calorias
+        val lastCalories = calories.maxByOrNull { it.endTime }?.kilocalorias
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SummaryCard(
@@ -177,7 +186,8 @@ fun OverviewTab(
             SummaryCard(
                 icon = Icons.Default.LocalFireDepartment,
                 label = "Calorias",
-                value = "--", // Dado não disponível no ViewModel
+                // MODIFICADO: Exibir o valor real das calorias
+                value = if (lastCalories != null) "%.0f".format(lastCalories) else "--",
                 unit = "kcal",
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFFFB74D) // CaloriesOrange
@@ -188,6 +198,7 @@ fun OverviewTab(
     }
 }
 
+// ... (Resto do código do PatientDetailScreen.kt sem alterações)
 @Composable
 fun StepsTab(stepsData: List<Passos>) {
     if (stepsData.isEmpty()) {

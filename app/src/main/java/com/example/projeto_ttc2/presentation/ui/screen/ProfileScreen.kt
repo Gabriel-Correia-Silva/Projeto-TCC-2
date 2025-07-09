@@ -1,6 +1,8 @@
 package com.example.projeto_ttc2.presentation.ui.screen
 
-import android.net.Uri
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,10 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projeto_ttc2.presentation.state.ProfileState
 import com.example.projeto_ttc2.presentation.state.UserRole
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,13 +32,14 @@ import java.util.*
 @Composable
 fun ProfileScreen(
     profileState: ProfileState,
-    onSaveProfile: (String, LocalDate?) -> Unit, // Assinatura simplificada
+    onSaveProfile: (String, LocalDate?) -> Unit,
     onClearState: () -> Unit,
     userId: String,
     userRole: UserRole?
 ) {
-
     val user = if (profileState is ProfileState.Success) profileState.user else null
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var editedFullName by remember(user?.name) { mutableStateOf(user?.name ?: "") }
     val initialDate = remember(user?.birthDate) {
@@ -49,9 +55,6 @@ fun ProfileScreen(
     }
     var editedBirthDate by remember { mutableStateOf(initialDate) }
     var showDatePicker by remember { mutableStateOf(false) }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-
 
     LaunchedEffect(profileState) {
         if (profileState is ProfileState.UpdateSuccess) {
@@ -109,6 +112,12 @@ fun ProfileScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
+            // Exibe o ID de Partilha se o utilizador for um supervisor
+            if (userRole is UserRole.Supervisor && user?.supervisorShareId != null) {
+                ShareIdCard(shareId = user.supervisorShareId, context = context, snackbarHostState = snackbarHostState)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Campo de Nome
             OutlinedTextField(
                 value = editedFullName,
@@ -137,10 +146,11 @@ fun ProfileScreen(
             val isLoading = profileState is ProfileState.Loading
             Button(
                 onClick = {
-                    // Chamada simplificada
                     onSaveProfile(editedFullName, editedBirthDate)
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isLoading
@@ -153,12 +163,60 @@ fun ProfileScreen(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Save,
-                        contentDescription = null,
+                        contentDescription = "Salvar Perfil",
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Salvar Perfil", fontSize = 16.sp)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Um Card que exibe o ID de partilha do supervisor e permite copiá-lo.
+ */
+@Composable
+fun ShareIdCard(shareId: String, context: Context, snackbarHostState: SnackbarHostState) {
+    val scope = rememberCoroutineScope()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Seu ID de Partilha",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                )
+                Text(
+                    shareId,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            IconButton(onClick = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("ID de Partilha", shareId)
+                clipboard.setPrimaryClip(clip)
+                scope.launch {
+                    snackbarHostState.showSnackbar("ID copiado para a área de transferência!")
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = "Copiar ID",
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
             }
         }
     }

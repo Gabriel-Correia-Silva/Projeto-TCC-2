@@ -10,4 +10,5 @@ interface UserRepository {
     suspend fun updateUser(userId: String, updates: Map<String, Any?>)
     suspend fun uploadProfileImage(userId: String, imageUri: Uri): String
     fun getSupervisedUsers(supervisorId: String): Flow<List<User>>
+    suspend fun findUserByShareId(shareId: String): User?
 }

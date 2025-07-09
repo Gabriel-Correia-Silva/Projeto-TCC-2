@@ -13,5 +13,6 @@ data class User(
     val supervisorIds: List<String>? = null,
     val profileImageUrl: String? = null,
     val gender: String? = null,
-    val birthDate: String? = null
+    val birthDate: String? = null,
+    val supervisorShareId: String? = null
 )

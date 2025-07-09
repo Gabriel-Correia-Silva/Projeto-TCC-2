@@ -132,6 +132,9 @@ fun SupervisedDashboardScreen(
                     cardColor = MaterialTheme.colorScheme.defaultCard
                 )
             }
+            item {
+                AlertsCard()
+            }
         }
     }
 }

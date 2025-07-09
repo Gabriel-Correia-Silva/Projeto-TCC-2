@@ -23,8 +23,13 @@ class UserRepositoryImpl @Inject constructor(
     private val usersCollection = firestore.collection("users")
 
     override suspend fun createUser(user: User) {
-        usersCollection.document(user.id).set(user).await()
-        userDao.upsert(user)
+        var userToCreate = user
+        if (user.role == "supervisor") {
+            val shareId = generateUniqueShareId()
+            userToCreate = user.copy(supervisorShareId = shareId)
+        }
+        usersCollection.document(userToCreate.id).set(userToCreate).await()
+        userDao.upsert(userToCreate)
     }
 
     override suspend fun getUser(id: String): User? {
@@ -48,7 +53,7 @@ class UserRepositoryImpl @Inject constructor(
             val updatedUser = currentUser.copy(
                 name = updates["name"] as? String ?: currentUser.name,
                 gender = updates["gender"] as? String ?: currentUser.gender,
-                birthDate = updates["birthDate"] as? String ?: currentUser.birthDate, // Espera String
+                birthDate = updates["birthDate"] as? String ?: currentUser.birthDate,
                 profileImageUrl = updates["profileImageUrl"] as? String ?: currentUser.profileImageUrl
             )
             userDao.update(updatedUser)
@@ -74,10 +79,36 @@ class UserRepositoryImpl @Inject constructor(
                     val users = snapshot.documents.mapNotNull { document ->
                         document.toObject(User::class.java)?.copy(id = document.id)
                     }
-                    Log.d("Firestore", "Supervisionados carregados: ${users.size} usuários encontrados.")
                     trySend(users)
                 }
             }
         awaitClose { listener.remove() }
+    }
+
+    override suspend fun findUserByShareId(shareId: String): User? {
+        if (shareId.isBlank()) return null
+        val querySnapshot = usersCollection
+            .whereEqualTo("supervisorShareId", shareId)
+            .limit(1)
+            .get()
+            .await()
+
+        if (querySnapshot.isEmpty) {
+            return null
+        }
+        val document = querySnapshot.documents.first()
+        return document.toObject(User::class.java)?.copy(id = document.id)
+    }
+
+    private suspend fun generateUniqueShareId(): String {
+        val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        while (true) {
+            val randomId = (1..6)
+                .map { charPool.random() }
+                .joinToString("")
+            if (findUserByShareId(randomId) == null) {
+                return randomId
+            }
+        }
     }
 }

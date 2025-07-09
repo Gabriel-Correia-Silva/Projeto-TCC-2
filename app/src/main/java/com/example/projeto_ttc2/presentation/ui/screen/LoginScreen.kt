@@ -58,14 +58,14 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "TTC Manager",
+                    text = "Ring Care",
                     style = MaterialTheme.typography.headlineMedium
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Sistema de acompanhamento de TCC",
+                    text = "Sistema de Monitoramento de Saúde e prevencão de quedas",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )

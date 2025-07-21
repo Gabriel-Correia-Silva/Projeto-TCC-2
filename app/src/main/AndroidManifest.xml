@@ -9,6 +9,7 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
@@ -43,6 +44,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ProjetoTTC2"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="31">
 
         <activity
@@ -100,6 +102,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>

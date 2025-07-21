@@ -64,10 +64,10 @@ class SensorMonitoringService : Service(), SensorEventListener {
         event?.let {
             when (it.sensor.type) {
                 Sensor.TYPE_ACCELEROMETER -> {
-                    Log.d(TAG, "Acelerômetro (BG) -> X: ${it.values[0]}, Y: ${it.values[1]}, Z: ${it.values[2]}")
+                   // Log.d(TAG, "Acelerômetro (BG) -> X: ${it.values[0]}, Y: ${it.values[1]}, Z: ${it.values[2]}")
                 }
                 Sensor.TYPE_GYROSCOPE -> {
-                    Log.d(TAG, "Giroscópio (BG) -> X: ${it.values[0]}, Y: ${it.values[1]}, Z: ${it.values[2]}")
+                   // Log.d(TAG, "Giroscópio (BG) -> X: ${it.values[0]}, Y: ${it.values[1]}, Z: ${it.values[2]}")
                 }
             }
         }

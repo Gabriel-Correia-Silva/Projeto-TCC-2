@@ -60,7 +60,6 @@ class DataSyncWorker @AssistedInject constructor(
             .setOngoing(true)
             .build()
 
-        // CORREÇÃO: Adicionar o tipo de serviço ao criar o ForegroundInfo.
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {

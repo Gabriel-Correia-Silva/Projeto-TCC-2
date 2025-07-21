@@ -5,14 +5,20 @@ import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.*
 import com.example.projeto_ttc2.database.repository.*
+import com.example.projeto_ttc2.network.ApiService
+import com.example.projeto_ttc2.network.InstantAdapter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.time.Instant
 import javax.inject.Singleton
 
 @Module
@@ -67,7 +73,27 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideApiService(): ApiService {
+        val gson = GsonBuilder()
+            .registerTypeAdapter(Instant::class.java, InstantAdapter())
+            .create()
+
+        return Retrofit.Builder()
+            .baseUrl("http://10.0.0.117:8000/") // Certifique-se de que este IP está correto
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+            .create(ApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
     fun provideHealthConnectManager(@ApplicationContext context: Context): HealthConnectManager = HealthConnectManager(context)
+
+    @Provides
+    @Singleton
+    fun provideUserPreferencesRepository(@ApplicationContext context: Context): UserPreferencesRepository {
+        return UserPreferencesRepository(context)
+    }
 
     @Provides
     @Singleton
@@ -76,7 +102,6 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFeedbackRepository(firestore: FirebaseFirestore): FeedbackRepository = FeedbackRepository(firestore)
-
 
     @Provides
     @Singleton
@@ -150,24 +175,43 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSyncRepository(
-        firestore: FirebaseFirestore,
-        heartRateRepository: HeartRateRepository,
-        stepsRepository: StepsRepository,
-        sleepRepository: SleepRepository,
-        caloriesRepository: CaloriesRepository,
-        oxygenSaturationRepository: OxygenSaturationRepository
-    ): SyncRepository {
-        return SyncRepository(firestore, heartRateRepository, stepsRepository, sleepRepository, caloriesRepository, oxygenSaturationRepository)
-    }
-
-    @Provides
-    @Singleton
     fun provideUserRepository(
         userDao: UserDao,
         firestore: FirebaseFirestore,
         storage: FirebaseStorage
     ): UserRepository {
         return UserRepositoryImpl(userDao, firestore, storage)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSensorRepository(@ApplicationContext context: Context): SensorRepository {
+        return SensorRepository(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncRepository(
+        firestore: FirebaseFirestore,
+        heartRateRepository: HeartRateRepository,
+        stepsRepository: StepsRepository,
+        sleepRepository: SleepRepository,
+        caloriesRepository: CaloriesRepository,
+        oxygenSaturationRepository: OxygenSaturationRepository,
+        sensorRepository: SensorRepository,
+        apiService: ApiService,
+        firebaseAuth: FirebaseAuth
+    ): SyncRepository {
+        return SyncRepository(
+            firestore,
+            heartRateRepository,
+            stepsRepository,
+            sleepRepository,
+            caloriesRepository,
+            oxygenSaturationRepository,
+            sensorRepository,
+            apiService,
+            firebaseAuth
+        )
     }
 }

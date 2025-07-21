@@ -34,7 +34,6 @@ fun UserCard(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    // Lógica simples de status (pode ser aprimorada com dados reais de alerta)
     val statusColor = when {
         heartRate > 120 -> Color.Red
         steps < 2000 -> Color(0xFFFBC02D) // Amarelo

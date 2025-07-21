@@ -284,6 +284,9 @@ fun AppNavigation(
                     dashboardViewModel = dashboardViewModel,
                 )
             }
+            composable("sensor_data_screen") {
+                SensorDataScreen()
+            }
         }
     }
 }

@@ -68,6 +68,9 @@ fun SettingsScreen(
         //SettingsItem(icon = Icons.Default.Notifications, text = "Notificações") { /* TODO */ }
         //SettingsItem(icon = Icons.Default.Palette, text = "Tema") { /* TODO */ }
         SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO: Implementar logout */ }
+        SettingsItem(icon = Icons.Default.Sensors, text = "Dados dos Sensores") {
+            navController.navigate("sensor_data_screen")
+        }
     }
 }
 

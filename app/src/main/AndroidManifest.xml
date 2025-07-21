@@ -95,6 +95,11 @@
             android:name=".background.SleepAlarmReceiver"
             android:enabled="true"
             android:exported="false" />
+        <service
+            android:name=".background.SensorMonitoringService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

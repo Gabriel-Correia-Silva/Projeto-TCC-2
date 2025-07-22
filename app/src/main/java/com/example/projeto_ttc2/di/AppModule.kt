@@ -79,7 +79,7 @@ object AppModule {
             .create()
 
         return Retrofit.Builder()
-            .baseUrl("http://10.0.0.117:8000/") // Certifique-se de que este IP está correto
+            .baseUrl("http://192.168.0.5:8000/") // Certifique-se de que este IP está correto
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(ApiService::class.java)

@@ -16,8 +16,8 @@ class BleScanner(private val bluetoothAdapter: BluetoothAdapter, private val sca
     private val bluetoothLeScanner: BluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
     private val handler = Handler(Looper.getMainLooper())
     private var scanning = false
-    private val SCAN_PERIOD: Long = 5000 // 5 segundos, como no Flutter
-    private val advertisedNamePattern = Pattern.compile("^R0\\d_[0-9A-Z]{4}$") // Padrão 'R0n_xxxx'
+    private val SCAN_PERIOD: Long = 5000 
+    private val advertisedNamePattern = Pattern.compile("^R0\\d_[0-9A-Z]{4}$") 
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun startScan() {

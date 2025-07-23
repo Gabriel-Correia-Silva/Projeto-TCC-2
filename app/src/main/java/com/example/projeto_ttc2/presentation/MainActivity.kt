@@ -1,13 +1,23 @@
 package com.example.projeto_ttc2.presentation
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.example.projeto_ttc2.presentation.ui.components.FallDetectionDialog
 import com.example.projeto_ttc2.presentation.ui.navigation.AppNavigation
 import com.example.projeto_ttc2.presentation.ui.theme.ProjetoTTC2Theme
-import com.example.projeto_ttc2.presentation.viewmodel.*
+import com.example.projeto_ttc2.presentation.viewmodel.AuthViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.EmergencyContactViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.HealthConnectViewModel
+import com.example.projeto_ttc2.presentation.viewmodel.ProfileViewModel
+
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -22,6 +32,8 @@ class MainActivity : ComponentActivity() {
     private val dashboardViewModel: DashboardViewModel by viewModels()
     private val emergencyContactViewModel: EmergencyContactViewModel by viewModels()
     private val profileViewModel: ProfileViewModel by viewModels()
+
+    private var showFallDialog by mutableStateOf(false)
 
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -44,6 +56,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         healthConnectViewModel.initialLoad(this)
+        handleIntent(intent)
+
         setContent {
             ProjetoTTC2Theme {
                 AppNavigation(
@@ -56,7 +70,28 @@ class MainActivity : ComponentActivity() {
                         googleSignInLauncher.launch(signInIntent)
                     }
                 )
+
+                FallDetectionDialog(
+                    showDialog = showFallDialog,
+                    onDismiss = { showFallDialog = false },
+                    onTimerFinished = {
+                        showFallDialog = false
+                        dashboardViewModel.triggerEmergencyActions(this, emergencyContactViewModel.primaryContact.value?.phone)
+                    }
+                )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra("SHOW_FALL_DIALOG", false) == true) {
+            showFallDialog = true
+            intent.removeExtra("SHOW_FALL_DIALOG")
         }
     }
 
@@ -67,4 +102,6 @@ class MainActivity : ComponentActivity() {
             .build()
         return GoogleSignIn.getClient(this, gso)
     }
+
+
 }

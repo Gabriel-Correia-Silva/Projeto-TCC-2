@@ -36,8 +36,8 @@ fun UserCard(
 
     val statusColor = when {
         heartRate > 120 -> Color.Red
-        steps < 2000 -> Color(0xFFFBC02D) // Amarelo
-        else -> Color(0xFF7CB342) // Verde
+        steps < 2000 -> Color(0xFFFBC02D)
+        else -> Color(0xFF7CB342)
     }
 
     Card(

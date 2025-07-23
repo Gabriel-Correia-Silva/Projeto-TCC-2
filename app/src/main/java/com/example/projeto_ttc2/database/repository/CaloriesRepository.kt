@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.ZonedDateTime
+import java.util.Date 
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,12 +27,12 @@ class CaloriesRepository @Inject constructor(
     private val TAG = "CaloriesRepository"
 
     fun getTodayActiveCalories(): Flow<Double> {
-        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        val startOfDay = Date.from(ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant())
         return caloriasDao.getSomaCaloriasPorTipoDesde("ATIVA", startOfDay).map { it ?: 0.0 }
     }
 
     fun getTodayTotalCalories(): Flow<Double> {
-        val startOfDay = ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant()
+        val startOfDay = Date.from(ZonedDateTime.now().toLocalDate().atStartOfDay(ZonedDateTime.now().zone).toInstant())
         return caloriasDao.getSomaCaloriasPorTipoDesde("TOTAL", startOfDay).map { it ?: 0.0 }
     }
 
@@ -48,7 +49,14 @@ class CaloriesRepository @Inject constructor(
             val activeRequest = ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, timeRangeFilter)
             val activeResponse = client.readRecords(activeRequest)
             val activeEntities = activeResponse.records.map { record ->
-                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "ATIVA", userId = userId)
+                Calorias(
+                    healthConnectId = record.metadata.id,
+                    startTime = Date.from(record.startTime),
+                    endTime = Date.from(record.endTime),
+                    kilocalorias = record.energy.inKilocalories,
+                    tipo = "ATIVA",
+                    userId = userId
+                )
             }
             if (activeEntities.isNotEmpty()) {
                 caloriasDao.insertAll(activeEntities)
@@ -58,7 +66,14 @@ class CaloriesRepository @Inject constructor(
             val totalRequest = ReadRecordsRequest(TotalCaloriesBurnedRecord::class, timeRangeFilter)
             val totalResponse = client.readRecords(totalRequest)
             val totalEntities = totalResponse.records.map { record ->
-                Calorias(healthConnectId = record.metadata.id, startTime = record.startTime, endTime = record.endTime, kilocalorias = record.energy.inKilocalories, tipo = "TOTAL", userId = userId)
+                Calorias(
+                    healthConnectId = record.metadata.id,
+                    startTime = Date.from(record.startTime),
+                    endTime = Date.from(record.endTime),
+                    kilocalorias = record.energy.inKilocalories,
+                    tipo = "TOTAL",
+                    userId = userId
+                )
             }
             if (totalEntities.isNotEmpty()) {
                 caloriasDao.insertAll(totalEntities)

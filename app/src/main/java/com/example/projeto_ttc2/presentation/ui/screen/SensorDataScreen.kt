@@ -35,10 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Importar
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.projeto_ttc2.background.SensorMonitoringService
 import com.example.projeto_ttc2.database.entities.AccelerometerData
 import com.example.projeto_ttc2.database.entities.GyroscopeData
+import com.example.projeto_ttc2.database.entities.RingAccelerometerData
 import com.example.projeto_ttc2.presentation.viewmodel.SensorDataViewModel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -65,13 +66,13 @@ fun SensorDataScreen(
     var recordedGyroscopeData by remember { mutableStateOf<List<GyroscopeData>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Coleta dos dados do acelerômetro do anel BLE
+
     val latestBleAccelerometerData by viewModel.latestBleAccelerometerData.collectAsStateWithLifecycle()
     val latestBleHeartRate by viewModel.latestBleHeartRate.collectAsStateWithLifecycle()
     val latestBleSpo2 by viewModel.latestBleSpo2.collectAsStateWithLifecycle()
 
 
-    // Listener para quando a UI está visível (sensores do telefone)
+
     DisposableEffect(Unit) {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         val gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
@@ -108,7 +109,7 @@ fun SensorDataScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Controles de monitoramento em segundo plano (sensores do telefone)
+
         BackgroundMonitoringControl(
             isMonitoring = isMonitoringInBackground,
             onToggle = {
@@ -121,7 +122,7 @@ fun SensorDataScreen(
             }
         )
 
-        // Exibição dos dados dos sensores do TELEFONE
+
         Text(
             text = "Sensores do Smartphone",
             style = MaterialTheme.typography.titleMedium,
@@ -132,33 +133,31 @@ fun SensorDataScreen(
         SensorDisplayCard("Giroscópio (Telefone)", phoneGyroscopeData)
 
 
-        // Exibição dos dados dos sensores do ANEL COLMI
+
         Text(
             text = "Sensores do Anel Colmi R06 (via BLE)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 16.dp)
         )
-        // Dados do Acelerômetro do Anel
+
         SensorDisplayCardRing(
             sensorName = "Acelerômetro (Anel)",
             data = latestBleAccelerometerData,
-            suffix = " RAW",
+            suffix = " m/s²",
             showGForce = true
         )
-        // Dados de Frequência Cardíaca do Anel
+
         SensorDisplayCardRingBPM(
             sensorName = "Frequência Cardíaca (Anel)",
             bpm = latestBleHeartRate
         )
-        // Dados de SpO2 do Anel
+
         SensorDisplayCardRingSpO2(
             sensorName = "Oxigenação Sanguínea (Anel)",
             spo2 = latestBleSpo2
         )
-        // Você pode adicionar mais cards aqui para outros dados do anel (ex: PPG Bruto, Stress, Bateria)
 
-        // Controles de Gravação e Salvamento (se aplicável aos dados do anel, atualmente para telefone)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround
@@ -246,11 +245,11 @@ private fun SensorDisplayCard(sensorName: String, data: Triple<Float, Float, Flo
     }
 }
 
-// NOVO: Composable para exibir dados do acelerômetro do anel
+
 @Composable
 private fun SensorDisplayCardRing(
     sensorName: String,
-    data: AccelerometerData,
+    data: RingAccelerometerData,
     suffix: String = "",
     showGForce: Boolean = false
 ) {
@@ -261,7 +260,7 @@ private fun SensorDisplayCardRing(
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) // Usar uma cor diferente para diferenciar
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = sensorName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -271,12 +270,9 @@ private fun SensorDisplayCardRing(
             Text(text = "Eixo Z: %.2f%s".format(z, suffix), fontSize = 16.sp)
 
             if (showGForce) {
-                // A conversão para G é feita na camada de ViewModel/Service antes de chegar aqui,
-                // mas se os valores de 'x', 'y', 'z' aqui são os valores RAW, fazemos a conversão na UI para display.
-                // Assumindo que 'x', 'y', 'z' em AccelerometerData já são os valores RAW
-                val xG = x / 512.0f
-                val yG = y / 512.0f
-                val zG = z / 512.0f
+                val xG = x / 9.80665f
+                val yG = y / 9.80665f
+                val zG = z / 9.80665f
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "Força G (X): %.2fG".format(xG), fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
                 Text(text = "Força G (Y): %.2fG".format(yG), fontSize = 14.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
@@ -286,7 +282,6 @@ private fun SensorDisplayCardRing(
     }
 }
 
-// NOVO: Composable para exibir dados de BPM do anel
 @Composable
 private fun SensorDisplayCardRingBPM(
     sensorName: String,
@@ -305,7 +300,6 @@ private fun SensorDisplayCardRingBPM(
     }
 }
 
-// NOVO: Composable para exibir dados de SpO2 do anel
 @Composable
 private fun SensorDisplayCardRingSpO2(
     sensorName: String,
@@ -374,7 +368,6 @@ private fun saveSensorDataToCsv(
                             writer.append("${item.timestamp},${item.x},${item.y},${item.z}\n")
                         }
                         else -> {
-                            // Caso de dados inesperados
                         }
                     }
                 }

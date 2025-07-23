@@ -76,7 +76,7 @@ fun AppNavigation(
                         "professional_screen" -> "Profissional"
                         "feedback_list_screen" -> "Centro de Feedback"
                         "sensors_settings_screen" -> "Metas e Alertas"
-                        "ble_sensor_settings_screen" -> "Sensores do Anel Colmi" // Título para a nova tela
+                        "ble_sensor_settings_screen" -> "Sensores do Anel Colmi" 
                         else -> "App"
                     },
                     showBackArrow = !isDashboard,
@@ -229,7 +229,7 @@ fun AppNavigation(
             composable("sensors_settings_screen") { SensorsSettingsScreen() }
             composable("feedback_list_screen") { FeedbackListScreen() }
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
-            composable("ble_sensor_settings_screen") { BleSensorSettingsScreen() } // Nova rota adicionada
+            composable("ble_sensor_settings_screen") { BleSensorSettingsScreen() } 
 
             composable("sleep_screen") {
                 SleepScreen(

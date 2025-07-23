@@ -42,9 +42,10 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Date
 import kotlin.math.atan2
 
-// Cores
+
 private val DarkTeal = DarkText
 private val MediumTeal = TealGreen
 private val AppLightTeal = LightTeal
@@ -97,7 +98,6 @@ fun SleepScreen(
     ) {
         SleepSummaryCard(sleepData = sono, stages = stages)
 
-        // Gráfico Donut
         SleepDonutChart(
             drawableSlices = allSlices.filter { it.proportion > 0 },
             allSlices = allSlices,
@@ -146,14 +146,15 @@ fun SleepSummaryCard(sleepData: Sono?, stages: List<SleepStage>) {
             }
 
             if (stages.isNotEmpty() && sleepData != null) {
-                sleepData.startTime?.let {
-                    sleepData.endTime?.let { it1 ->
-                        SleepTimelineBar(
-                            stages = stages,
-                            startTime = it,
-                            endTime = it1
-                        )
-                    }
+                val startTimeInstant = sleepData.startTime?.toInstant()
+                val endTimeInstant = sleepData.endTime?.toInstant()
+
+                if (startTimeInstant != null && endTimeInstant != null) {
+                    SleepTimelineBar(
+                        stages = stages,
+                        startTime = startTimeInstant,
+                        endTime = endTimeInstant
+                    )
                 }
             }
 
@@ -248,7 +249,6 @@ internal fun SleepDonutChart(
                     val centerX = size.width / 2f
                     val centerY = size.height / 2f
                     val touchAngle = Math.toDegrees(atan2((offset.y - centerY).toDouble(), (offset.x - centerX).toDouble())).toFloat()
-                    // Normalize angle
                     val normalizedAngle = (touchAngle + 360) % 360
                     val slice = slicesToDraw.find {
                         val start = (it.startAngle + 360) % 360
@@ -404,8 +404,8 @@ fun getSleepStageColor(stageType: Int): Color {
 fun SleepScreenPreview() {
     val now = Instant.now()
     val sono = Sono(
-        startTime = now.minus(8, ChronoUnit.HOURS),
-        endTime = now,
+        startTime = Date.from(now.minus(8, ChronoUnit.HOURS)),
+        endTime = Date.from(now),
         durationMinutes = 480,
         deepSleepDurationMinutes = 120,
         lightSleepDurationMinutes = 240,

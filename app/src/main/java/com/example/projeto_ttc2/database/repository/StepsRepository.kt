@@ -10,7 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await // Importar await
+import kotlinx.coroutines.tasks.await 
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,7 +27,7 @@ class StepsRepository @Inject constructor(
     private val firebaseHealthDataRepository: FirebaseHealthDataRepository
 ) {
     private val TAG = "StepsRepository"
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE // yyyy-MM-dd
+    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE 
 
     fun getTodayStepsFlow(): Flow<Long> {
         val today = LocalDate.now().format(dateFormatter)
@@ -100,7 +100,7 @@ class StepsRepository @Inject constructor(
         }
     }
 
-    // Novo método para fazer upsert de passos do BLE
+
     suspend fun upsertStepsFromBle(passos: Passos) {
         try {
             passosDao.upsert(passos)

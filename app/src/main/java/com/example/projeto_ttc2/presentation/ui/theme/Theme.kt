@@ -33,7 +33,7 @@ private val LightColorScheme = lightColorScheme(
     onSurface = DarkText,
 )
 
-// Definindo as cores personalizadas como extensões do ColorScheme
+
 val ColorScheme.heartRateCard: Color @Composable
 get() = if (isSystemInDarkTheme()) HeartRateRed else HeartRateRed
 
@@ -53,7 +53,6 @@ get() = if (isSystemInDarkTheme()) DefaultCardColor else DefaultCardColor
 @Composable
 fun ProjetoTTC2Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

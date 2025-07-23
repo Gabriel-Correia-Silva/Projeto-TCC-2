@@ -21,6 +21,7 @@ import com.example.projeto_ttc2.R
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.OxigenacaoSanguinea
 import com.example.projeto_ttc2.database.entities.Passos
+import com.example.projeto_ttc2.database.entities.RingAccelerometerData
 import com.example.projeto_ttc2.database.repository.BleSensorDataRepository
 import com.example.projeto_ttc2.database.repository.BleSensorPreferencesRepository
 import com.example.projeto_ttc2.database.repository.HeartRateRepository
@@ -35,10 +36,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.util.UUID
 import javax.inject.Inject
+import kotlin.math.sqrt
 
 @AndroidEntryPoint
 class BleMonitoringService : Service() {
@@ -64,6 +70,12 @@ class BleMonitoringService : Service() {
     private var isScanning = false
     private var isConnected = false
 
+    private var fallDetectionJob: Job? = null
+    private var potentialFallTimestamp: Long = 0
+    private val FREE_FALL_THRESHOLD = 2.5
+    private val IMPACT_THRESHOLD = 30.0
+    private val FALL_CONFIRMATION_WINDOW = 1000L
+
     companion object {
         const val ACTION_START_BLE_MONITORING = "ACTION_START_BLE_MONITORING"
         const val ACTION_STOP_BLE_MONITORING = "ACTION_STOP_BLE_MONITORING"
@@ -80,6 +92,7 @@ class BleMonitoringService : Service() {
         bleScanner = BleScanner(bluetoothAdapter, this::onScanResultReceived)
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand. Ação: ${intent?.action}")
         when (intent?.action) {
@@ -106,17 +119,11 @@ class BleMonitoringService : Service() {
         Log.d(TAG, "startBleMonitoring() chamado.")
         val notification = createNotification().build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            if (checkSelfPermission(Manifest.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE) != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "Permissão FOREGROUND_SERVICE_CONNECTED_DEVICE não concedida. Não foi possível iniciar o serviço em primeiro lugar.")
-                stopSelf()
-                return
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-
 
         if (!bluetoothAdapter.isEnabled) {
             Log.e(TAG, "Bluetooth não está habilitado. Parando o serviço.")
@@ -124,189 +131,109 @@ class BleMonitoringService : Service() {
             return
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
-                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "Permissões BLUETOOTH_SCAN ou BLUETOOTH_CONNECT não concedidas. Parando o serviço.")
-                stopSelf()
-                return
-            }
-        } else {
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "Permissão ACCESS_FINE_LOCATION não concedida. Parando o serviço.")
-                stopSelf()
-                return
-            }
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            Log.e(TAG, "Permissão BLUETOOTH_SCAN não concedida. Parando o serviço.")
+            stopSelf()
+            return
         }
 
         if (!isScanning) {
-            serviceScope.launch {
-                Log.d(TAG, "Atrasando 1 segundo antes de iniciar a varredura BLE para dar tempo ao sistema.")
-                delay(1000)
-                if (!isScanning) {
-                    Log.d(TAG, "Iniciando scan BLE para 'R0' devices.")
-                    bleScanner.startScan()
-                    isScanning = true
-                } else {
-                    Log.d(TAG, "Scan BLE já está em andamento (iniciado durante o atraso).")
-                }
-            }
-        } else {
-            Log.d(TAG, "Scan BLE já está em andamento.")
+            bleScanner.startScan()
+            isScanning = true
+            Log.d(TAG, "Iniciando scan BLE.")
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun onScanResultReceived(result: ScanResult) {
-        Log.d(TAG, "ScanResult recebido. Anel Colmi R06 encontrado: ${result.device.name}. MAC: ${result.device.address}")
+        Log.d(TAG, "Anel Colmi R06 encontrado: ${result.device.name}. MAC: ${result.device.address}")
         bleScanner.stopScan()
         isScanning = false
 
         colmiRingConnector = ColmiRingConnector(applicationContext, result.device)
         colmiRingConnector?.connect()
         isConnected = true
-        Log.d(TAG, "Tentando conectar ao anel Colmi R06 com MAC: ${result.device.address}.")
+        Log.d(TAG, "Tentando conectar ao anel Colmi R06.")
 
         startCollectingAndSendingCommands()
     }
 
     private fun startCollectingAndSendingCommands() {
         colmiRingConnector?.let { connector ->
-            Log.d(TAG, "startCollectingAndSendingCommands() - Iniciando coletores e lógica de comandos. (VERSÃO DEPURADA)")
+            Log.d(TAG, "Iniciando coletores de dados e lógica de comandos.")
+
+
+            startFallDetectionCollector()
+
 
             serviceScope.launch {
-                Log.d(TAG, ">>> INICIANDO COLETOR DE ACELERÔMETRO (ISOLADO E SEM FILTRO) <<<")
-                connector.accelerometerData
-                    .collect { (x, y, z) ->
-                        Log.d(TAG, "DEBUG_ACCEL_NO_FILTER: Recebido X=${x}, Y=${y}, Z=${z} de ColmiRingConnector (SEM FILTRO DE PREFERÊNCIA).")
-                        val xFloat = x.toFloat()
-                        val yFloat = y.toFloat()
-                        val zFloat = z.toFloat()
-
-                        Log.d(TAG, "DEBUG_ACCEL_UPDATE_REPO: Enviando X=${xFloat}, Y=${yFloat}, Z=${zFloat} para BleSensorDataRepository.")
-
-                        bleSensorDataRepository.updateAccelerometerData(xFloat, yFloat, zFloat)
-                        val xG = x / 512.0
-                        val yG = y / 512.0
-                        val zG = z / 512.0
-                        Log.d(TAG, "Dados do Acelerômetro do Anel: RAW(X=$x, Y=$y, Z=$z) | G-force(X=%.2fG, Y=%.2fG, Z=%.2fG)".format(xG, yG, zG))
+                connector.heartRateData
+                    .combine(bleSensorPreferencesRepository.heartRateEnabled) { bpm, enabled -> Pair(bpm, enabled) }
+                    .filter { it.second }
+                    .collect { (bpm, _) ->
+                        val userId = getUserId()
+                        val heartRateObject = BatimentoCardiaco(
+                            timestamp = System.currentTimeMillis(),
+                            healthConnectId = "BLE_${UUID.randomUUID()}",
+                            bpm = bpm.toLong(),
+                            userId = userId ?: ""
+                        )
+                        bleSensorDataRepository.updateHeartRate(heartRateObject)
                     }
             }
 
 
-            serviceScope.launch {
-                Log.d(TAG, "Iniciando rotina de envio de comandos: Atraso inicial de 4s para GATT.")
-                delay(4000)
 
-                val initialPrefsCombined = combine(
-                    bleSensorPreferencesRepository.accelerometerEnabled,
-                    bleSensorPreferencesRepository.heartRateEnabled,
-                    bleSensorPreferencesRepository.spo2Enabled,
-                    bleSensorPreferencesRepository.stressEnabled,
-                    bleSensorPreferencesRepository.stepsGeneralEnabled
-                ) { it }.first()
+        } ?: Log.e(TAG, "ColmiRingConnector não inicializado.")
+    }
 
-                val initialAccelEnabled = initialPrefsCombined[0] as Boolean
-                val initialHeartRateEnabled = initialPrefsCombined[1] as Boolean
-                val initialSpo2Enabled = initialPrefsCombined[2] as Boolean
-                val initialStressEnabled = initialPrefsCombined[3] as Boolean
-                val initialStepsGeneralEnabled = initialPrefsCombined[4] as Boolean
-
-                sendCommandsBasedOnPreferences(
-                    connector,
-                    initialAccelEnabled,
-                    initialHeartRateEnabled,
-                    initialSpo2Enabled,
-                    initialStressEnabled,
-                    initialStepsGeneralEnabled
-                )
-
-                combine(
-                    bleSensorPreferencesRepository.accelerometerEnabled,
-                    bleSensorPreferencesRepository.heartRateEnabled,
-                    bleSensorPreferencesRepository.spo2Enabled,
-                    bleSensorPreferencesRepository.stressEnabled,
-                    bleSensorPreferencesRepository.stepsGeneralEnabled
-                ) { preferencesArray ->
-                    val currentAccelEnabled = preferencesArray[0] as Boolean
-                    val currentHeartRateEnabled = preferencesArray[1] as Boolean
-                    val currentSpo2Enabled = preferencesArray[2] as Boolean
-                    val currentStressEnabled = preferencesArray[3] as Boolean
-                    val currentStepsGeneralEnabled = preferencesArray[4] as Boolean
-
-                    Log.d(TAG, "Preferências de sensores BLE combinadas atualizadas (reativo). Reavaliando comandos.")
-                    sendCommandsBasedOnPreferences(
-                        connector,
-                        currentAccelEnabled,
-                        currentHeartRateEnabled,
-                        currentSpo2Enabled,
-                        currentStressEnabled,
-                        currentStepsGeneralEnabled
-                    )
-                }.collect { }
+    private fun startFallDetectionCollector() {
+        fallDetectionJob?.cancel()
+        fallDetectionJob = serviceScope.launch {
+            bleSensorDataRepository.newRingAccelerometerReading.collectLatest { reading ->
+                analyzeMovementForFall(reading)
             }
-
-        } ?: Log.e(TAG, "ColmiRingConnector não está inicializado ao tentar iniciar coleta e comandos.")
+        }
     }
 
-    private suspend fun sendCommandsBasedOnPreferences(
-        connector: ColmiRingConnector,
-        accelEnabled: Boolean,
-        heartRateEnabled: Boolean,
-        spo2Enabled: Boolean,
-        stressEnabled: Boolean,
-        stepsGeneralEnabled: Boolean
-    ) {
-        Log.d(TAG, "sendCommandsBasedOnPreferences() chamado com:")
-        Log.d(TAG, "  Acelerômetro habilitado? $accelEnabled")
-        Log.d(TAG, "  Frequência Cardíaca habilitado? $heartRateEnabled")
-        Log.d(TAG, "  SpO2 habilitado? $spo2Enabled")
-        Log.d(TAG, "  Stress habilitado? $stressEnabled")
-        Log.d(TAG, "  Passos/Geral habilitado? $stepsGeneralEnabled")
+    private fun analyzeMovementForFall(data: RingAccelerometerData) {
+        val magnitude = sqrt(data.x * data.x + data.y * data.y + data.z * data.z)
+        val currentTime = System.currentTimeMillis()
 
-
-        val anyRawDataEnabled = accelEnabled
-        if (anyRawDataEnabled) {
-            Log.d(TAG, "Enviando comando 'enableAllRawData' (0xA104) para o anel.")
-            connector.sendCommand(hexStringToCmdBytes("a104"))
-        } else {
-            Log.d(TAG, "Enviando comando 'disableAllRawData' (0xA102) para o anel.")
-            connector.sendCommand(hexStringToCmdBytes("a102"))
+        if (magnitude < FREE_FALL_THRESHOLD) {
+            potentialFallTimestamp = currentTime
+            Log.d(TAG, "Queda Livre Potencial Detectada! Magnitude: $magnitude")
         }
-        delay(500)
 
-        if (heartRateEnabled) {
-            Log.d(TAG, "Enviando comando 'requestHeartRate' (0x6901) para o anel.")
-            connector.sendCommand(hexStringToCmdBytes("6901"))
+        if (potentialFallTimestamp > 0 && (currentTime - potentialFallTimestamp) < FALL_CONFIRMATION_WINDOW) {
+            if (magnitude > IMPACT_THRESHOLD) {
+                Log.d(TAG, "Impacto Detectado! Magnitude: $magnitude. QUEDA CONFIRMADA!")
+                triggerFallAlertUI()
+                potentialFallTimestamp = 0
+            }
         }
-        delay(500)
 
-        if (spo2Enabled) {
-            Log.d(TAG, "Enviando comando 'requestSpO2' (0x6903) para o anel.")
-            connector.sendCommand(hexStringToCmdBytes("6903"))
+        if (currentTime - potentialFallTimestamp > FALL_CONFIRMATION_WINDOW) {
+            potentialFallTimestamp = 0
         }
-        delay(500)
-
-        if (stressEnabled) {
-            Log.d(TAG, "Enviando comando 'requestStress' (0x6908) para o anel.")
-            connector.sendCommand(hexStringToCmdBytes("6908"))
-        }
-        delay(500)
     }
 
+    private fun triggerFallAlertUI() {
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("SHOW_FALL_DIALOG", true)
+        }
+        startActivity(intent)
+    }
 
     private suspend fun getUserId(): String? {
-        val userId = authRepository.getCurrentUserFlow().first()?.uid
-        if (userId == null) {
-            Log.w(TAG, "UserID nulo, não é possível salvar dados.")
-        }
-        return userId
+        return authRepository.getCurrentUserFlow().first()?.uid
     }
 
     private fun stopBleMonitoring() {
-        Log.d(TAG, "stopBleMonitoring() chamado. Desativando dados brutos e desconectando.")
+        Log.d(TAG, "Parando monitoramento BLE.")
         serviceScope.launch {
-            Log.d(TAG, "Enviando comando 'disableAllRawData' (0xA102) antes de desconectar.")
-            colmiRingConnector?.sendCommand(hexStringToCmdBytes("a102"))
+            colmiRingConnector?.sendCommand(hexStringToCmdBytes("a102")) 
             delay(500)
             colmiRingConnector?.disconnect()
         }
@@ -344,10 +271,10 @@ class BleMonitoringService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        Log.d(TAG, "onDestroy do BleMonitoringService. Garantindo que tudo esteja parado.")
         super.onDestroy()
         serviceScope.cancel()
         colmiRingConnector?.disconnect()
         bleScanner.stopScan()
+        Log.d(TAG, "Serviço BLE destruído.")
     }
 }

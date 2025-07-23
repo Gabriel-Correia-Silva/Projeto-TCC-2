@@ -9,6 +9,7 @@ import androidx.room.Relation
 import com.google.firebase.firestore.IgnoreExtraProperties
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.Instant
+import java.util.Date
 
 @IgnoreExtraProperties
 @Entity(tableName = "sono")
@@ -16,9 +17,9 @@ data class Sono(
     @PrimaryKey
     val healthConnectId: String = "",
     @ServerTimestamp
-    val startTime: Instant? = null,
+    val startTime: Date? = null,
     @ServerTimestamp
-    val endTime: Instant? = null,
+    val endTime: Date? = null,
     val durationMinutes: Long = 0L,
     val remSleepDurationMinutes: Long? = null,
     val deepSleepDurationMinutes: Long? = null,

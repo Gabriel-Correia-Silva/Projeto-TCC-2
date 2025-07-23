@@ -18,7 +18,7 @@ import com.example.projeto_ttc2.presentation.viewmodel.NightMonitoringViewModel
 @Composable
 fun NightMonitoringScreen(
     navController: NavController,
-    viewModel: NightMonitoringViewModel = hiltViewModel() // Injeta o ViewModel
+    viewModel: NightMonitoringViewModel = hiltViewModel() 
 ) {
     val context = LocalContext.current
     val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsStateWithLifecycle()

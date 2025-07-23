@@ -6,7 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.projeto_ttc2.database.entities.Calorias
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
+import java.util.Date
 
 @Dao
 interface CaloriasDao {
@@ -14,5 +14,5 @@ interface CaloriasDao {
     suspend fun insertAll(calorias: List<Calorias>)
 
     @Query("SELECT SUM(kilocalorias) FROM calorias WHERE tipo = :tipo AND startTime >= :inicioDoDia")
-    fun getSomaCaloriasPorTipoDesde(tipo: String, inicioDoDia: Instant): Flow<Double?>
+    fun getSomaCaloriasPorTipoDesde(tipo: String, inicioDoDia: Date): Flow<Double?>
 }

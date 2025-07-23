@@ -170,7 +170,7 @@ fun InteractiveBarChart(
             val barWidthWithSpacing = chartWidth / data.size
             val barWidth = barWidthWithSpacing * 0.6f
 
-            // Desenha o eixo Y e as linhas de grade
+           
             val numGridLines = 4
             (0..numGridLines).forEach { i ->
                 val value = maxValue / numGridLines * i
@@ -191,7 +191,7 @@ fun InteractiveBarChart(
                 }
             }
 
-            // Desenha as barras e os rótulos do eixo X
+           
             data.forEachIndexed { index, barData ->
                 val x = yAxisSpace + (barWidthWithSpacing * index) + (barWidthWithSpacing - barWidth) / 2
                 val barHeight = (barData.value / maxValue * chartHeight) * animationProgress[index].value
@@ -218,12 +218,12 @@ fun InteractiveBarChart(
                 }
             }
 
-            // Desenha a linha de destaque e o tooltip
+        
             selectedIndex?.let { index ->
                 val barData = data[index]
                 val x = yAxisSpace + (barWidthWithSpacing * index) + barWidthWithSpacing / 2
 
-                // Linha de destaque
+               
                 drawLine(
                     color = onSurfaceColor,
                     start = Offset(x, 0f),
@@ -231,7 +231,7 @@ fun InteractiveBarChart(
                     strokeWidth = 2f
                 )
 
-                // Tooltip
+                
                 val tooltipText = "${barData.value.toInt()} passos"
                 val textWidth = textPaint.measureText(tooltipText)
                 val tooltipPath = Path().apply {
@@ -355,7 +355,6 @@ private fun TotalStepsCard(
                         "Distância: ${"%.2f".format(distanceKm)} km",
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
                     )
-                    // O tempo total pode ser calculado com base nos dados de atividade, se disponíveis
                     Text(
                         "Tempo total: --",
                         color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)

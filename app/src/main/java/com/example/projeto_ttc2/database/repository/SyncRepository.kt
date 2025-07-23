@@ -16,6 +16,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Date // Import Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +30,8 @@ class SyncRepository @Inject constructor(
     private val oxygenSaturationRepository: OxygenSaturationRepository,
     private val sensorRepository: SensorRepository,
     private val apiService: ApiService,
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val bleSensorDataRepository: BleSensorDataRepository
 ) {
     private val TAG = "SyncRepository"
 
@@ -42,35 +44,33 @@ class SyncRepository @Inject constructor(
                 return
             }
 
-
             val batch = firestore.batch()
-            val sensorReadings: Pair<List<AccelerometerData>, List<GyroscopeData>>
+            val phoneSensorReadings: Pair<List<AccelerometerData>, List<GyroscopeData>>
 
             coroutineScope {
-
                 val heartRateJob = async { heartRateRepository.syncData(batch) }
                 val stepsJob = async { stepsRepository.syncData(batch) }
                 val sleepJob = async { sleepRepository.syncData(batch) }
                 val caloriesJob = async { caloriesRepository.syncData(batch) }
                 val oxygenJob = async { oxygenSaturationRepository.syncData(batch) }
 
-
                 val sensorJob = async {
                     withTimeoutOrNull(6000L) {
                         sensorRepository.captureSensorData(5000L).firstOrNull()
                     } ?: run {
-                        Log.w(TAG, "Timeout na captura de sensores, a usar listas vazias.")
+                        Log.w(TAG, "Timeout na captura de sensores do telefone, a usar listas vazias.")
                         Pair(emptyList(), emptyList())
                     }
                 }
 
                 awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob, oxygenJob)
-                sensorReadings = sensorJob.await()
+                phoneSensorReadings = sensorJob.await()
             }
-            Log.d(TAG, "Sincronização local e captura de sensores concluídas.")
+            Log.d(TAG, "Sincronização local (Health Connect) e captura de sensores do telefone concluídas.")
 
             try {
-                Log.d(TAG, "A montar o payload para a API Web...")
+                Log.d(TAG, "A montar o payload para a API Web (incluindo dados do anel)...")
+
                 val latestSleepWithStages = sleepRepository.getLatestSleepSessionWithStages().firstOrNull()
                 val sleepPayload = if (latestSleepWithStages?.sono != null) {
                     listOf(SleepSessionPayload(latestSleepWithStages.sono, latestSleepWithStages.stages))
@@ -84,23 +84,57 @@ class SyncRepository @Inject constructor(
                 val heartRateToday = heartRateRepository.getTodayHeartRateRecords().firstOrNull() ?: emptyList()
 
                 val caloriesToday = caloriesRepository.getTodayTotalCalories().firstOrNull()?.let {
-                    if (it > 0) listOf(Calorias(kilocalorias = it, userId = userId)) else emptyList()
+                    if (it > 0) {
+                        val now = java.time.Instant.now()
+                        listOf(
+                            Calorias(
+                                healthConnectId = "daily_total_${java.time.LocalDate.now()}",
+                                startTime = Date.from(now),
+                                endTime = Date.from(now),
+                                kilocalorias = it,
+                                tipo = "TOTAL",
+                                userId = userId
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
                 } ?: emptyList()
 
                 val oxygenToday = oxygenSaturationRepository.getLatestSevenOxygenationReadings().firstOrNull()?.map {
                     OxigenacaoSanguinea(spo2 = it, userId = userId)
                 } ?: emptyList()
 
+
+                val bleRingAccelerometerData = bleSensorDataRepository.getAndClearBufferedRingAccelerometerData()
+                Log.d(TAG, "Dados de acelerômetro do anel a enviar (${bleRingAccelerometerData.size} leituras).")
+
+                val bleHeartRateData = bleSensorDataRepository.getAndClearBufferedHeartRateData()
+                Log.d(TAG, "Dados de FC do anel a enviar (${bleHeartRateData.size} leituras).")
+
+                val bleSpo2Data = bleSensorDataRepository.getAndClearBufferedSpo2Data()
+                Log.d(TAG, "Dados de SpO2 do anel a enviar (${bleSpo2Data.size} leituras).")
+
+                val bleRawSpO2Data = bleSensorDataRepository.getAndClearBufferedRawSpO2Data()
+                Log.d(TAG, "Dados brutos de SpO2 do anel a enviar (${bleRawSpO2Data.size} leituras).")
+
+                val bleRawPpgData = bleSensorDataRepository.getAndClearBufferedRawPpgData()
+                Log.d(TAG, "Dados brutos de PPG do anel a enviar (${bleRawPpgData.size} leituras).")
+
+
                 val detailedPayload = DetailedHealthAndSensorPayload(
                     userId = userId,
                     timestamp = System.currentTimeMillis(),
-                    heartRateRecords = heartRateToday,
+                    heartRateRecords = heartRateToday + bleHeartRateData,
                     steps = stepsPayload,
                     sleepSessions = sleepPayload,
                     calorieRecords = caloriesToday,
-                    oxygenSaturationRecords = oxygenToday,
-                    accelerometerReadings = sensorReadings.first,
-                    gyroscopeReadings = sensorReadings.second
+                    oxygenSaturationRecords = oxygenToday + bleSpo2Data,
+                    accelerometerReadings = phoneSensorReadings.first,
+                    gyroscopeReadings = phoneSensorReadings.second,
+                    rawSpO2Readings = bleRawSpO2Data,
+                    rawPpgReadings = bleRawPpgData,
+                    ringAccelerometerReadings = bleRingAccelerometerData
                 )
 
                 Log.d(TAG, "A enviar o payload para a API Web...")
@@ -114,20 +148,19 @@ class SyncRepository @Inject constructor(
                 Log.e(TAG, "✗ Erro de comunicação com a API Web.", e)
             }
 
-
             try {
-                Log.d(TAG, "A tentar enviar o lote para o Firestore (uma única vez)...")
+                Log.d(TAG, "A tentar enviar o lote do Health Connect para o Firestore (uma única vez)...")
                 batch.commit().await()
-                Log.d(TAG, "✓ Dados enviados com sucesso para o Firestore.")
+                Log.d(TAG, "✓ Dados do Health Connect enviados com sucesso para o Firestore.")
             } catch (e: Exception) {
-                Log.w(TAG, "✗ Falha ao enviar para o Firestore (ignorado): ${e.message}")
+                Log.w(TAG, "✗ Falha ao enviar dados do Health Connect para o Firestore (ignorado): ${e.message}")
             }
 
             Log.d(TAG, "--- SINCRONIZAÇÃO CONCLUÍDA ---")
 
         } catch (e: Exception) {
             Log.e(TAG, "--- FALHA CRÍTICA NA SINCRONIZAÇÃO ---", e)
-            throw e // Relança a excepção para que o WorkManager possa tentar novamente mais tarde
+            throw e
         }
     }
 }

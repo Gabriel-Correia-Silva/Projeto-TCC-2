@@ -19,7 +19,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sensors
-import androidx.compose.material.icons.filled.BluetoothSearching // Novo ícone
+import androidx.compose.material.icons.filled.BluetoothSearching 
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -30,14 +30,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext // Importar LocalContext
+import androidx.compose.ui.platform.LocalContext 
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.projeto_ttc2.background.BleMonitoringService // Importar o serviço BLE
+import com.example.projeto_ttc2.background.BleMonitoringService 
 import com.example.projeto_ttc2.presentation.state.UserRole
 
 val TealColor = Color(0xFF4DB6AC)
@@ -68,30 +68,30 @@ fun SettingsScreen(
             SettingsItem(icon = Icons.Default.Sensors, text = "Metas e Alertas") {
                 navController.navigate("sensors_settings_screen")
             }
-            // Nova opção para monitoramento BLE
+          
             SettingsItem(icon = Icons.Default.BluetoothSearching, text = "Conectar Anel Colmi") {
-                // Iniciar o serviço de monitoramento BLE
+              
                 val intent = Intent(context, BleMonitoringService::class.java).apply {
                     action = BleMonitoringService.ACTION_START_BLE_MONITORING
                 }
                 context.startService(intent)
-                // Você pode adicionar um Toast ou SnackBar para indicar que o serviço foi iniciado
+               
             }
-            // Opção para parar o serviço BLE
+          
             SettingsItem(icon = Icons.Default.BluetoothSearching, text = "Parar Monitoramento Anel Colmi") {
                 val intent = Intent(context, BleMonitoringService::class.java).apply {
                     action = BleMonitoringService.ACTION_STOP_BLE_MONITORING
                 }
-                context.startService(intent) // Usar startService para garantir que a intenção seja entregue para o serviço parar
+                context.startService(intent)
             }
-            // Opção para configurar quais dados do anel são capturados
+           
             SettingsItem(icon = Icons.Default.Sensors, text = "Configurar Sensores do Anel") {
                 navController.navigate("ble_sensor_settings_screen")
             }
         }
 
-        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") { /* TODO: Implementar logout */ }
-        SettingsItem(icon = Icons.Default.Sensors, text = "Dados dos Sensores (App)") { // Renomeado para maior clareza
+        SettingsItem(icon = Icons.Default.ExitToApp, text = "Sair") {  }
+        SettingsItem(icon = Icons.Default.Sensors, text = "Dados dos Sensores (App)") { 
             navController.navigate("sensor_data_screen")
         }
     }

@@ -58,7 +58,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // --- FUNÇÃO MODIFICADA ---
+
     fun saveProfile(
         fullName: String,
         birthDate: LocalDate?
@@ -72,7 +72,7 @@ class ProfileViewModel @Inject constructor(
             }
 
             try {
-                // Apenas nome e data de nascimento são atualizados
+              
                 val updates = mutableMapOf<String, Any?>()
                 updates["name"] = fullName
                 updates["birthDate"] = birthDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)

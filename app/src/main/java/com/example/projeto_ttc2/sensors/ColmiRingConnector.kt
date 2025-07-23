@@ -1,8 +1,11 @@
 package com.example.projeto_ttc2.sensors
 
+import android.Manifest
 import android.bluetooth.*
+import android.content.ContentValues.TAG
 import android.content.Context
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,8 +14,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.sqrt
+
 
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
 
 fun Int.toSigned(numBits: Int): Int {
     val maxVal = 1 shl (numBits - 1)
@@ -21,13 +27,14 @@ fun Int.toSigned(numBits: Int): Int {
     return if (value >= maxVal) value - (1 shl numBits) else value
 }
 
-fun hexStringToCmdBytes(hexString: String): ByteArray {
 
+fun hexStringToCmdBytes(hexString: String): ByteArray {
     require(hexString.length <= 30 && hexString.length % 2 == 0) { "hex string must be an even number of hex digits [0-f] less than or equal to 30 chars" }
     val bytes = ByteArray(16) { 0 }
     for (i in 0 until hexString.length / 2) {
         bytes[i] = hexString.substring(2 * i, 2 * i + 2).toInt(16).toByte()
     }
+
     bytes[15] = bytes.foldIndexed(0) { index, previous, current -> if (index < 15) previous + (current.toInt() and 0xFF) else previous }.toByte()
     return bytes
 }
@@ -39,10 +46,14 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     private var cmdWriteCharacteristic: BluetoothGattCharacteristic? = null
     private var cmdNotifyCharacteristic: BluetoothGattCharacteristic? = null
 
+
+
+
     private val CMD_SERVICE_UUID = UUID.fromString("6e40fff0-b5a3-f393-e0a9-e50e24dcca9e")
     private val CMD_WRITE_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
     private val CMD_NOTIFY_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
     private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+
 
     var isConnected: Boolean = false
         private set
@@ -56,6 +67,7 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
 
     private var connectionTimeoutJob: Job? = null
     private val connectorScope = CoroutineScope(Dispatchers.IO)
+
 
     private val _batteryData = MutableSharedFlow<Pair<Int, Boolean>>(replay = 1)
     val batteryData: SharedFlow<Pair<Int, Boolean>> = _batteryData
@@ -72,8 +84,16 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     private val _stressData = MutableSharedFlow<Int>(replay = 1)
     val stressData: SharedFlow<Int> = _stressData
 
-    private val _accelerometerData = MutableSharedFlow<Triple<Int, Int, Int>>(replay = 2)
-    val accelerometerData: SharedFlow<Triple<Int, Int, Int>> = _accelerometerData
+    private val _accelerometerData = MutableSharedFlow<Triple<Float, Float, Float>>(replay = 2)
+    val accelerometerData: SharedFlow<Triple<Float, Float, Float>> = _accelerometerData
+
+
+    private val _rawSpO2Data = MutableSharedFlow<Quadruple<Int, Int, Int, Int>>(replay = 2)
+    val rawSpO2Data: SharedFlow<Quadruple<Int, Int, Int, Int>> = _rawSpO2Data
+
+    private val _rawPpgData = MutableSharedFlow<Quadruple<Int, Int, Int, Int>>(replay = 2)
+    val rawPpgData: SharedFlow<Quadruple<Int, Int, Int, Int>> = _rawPpgData
+
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
@@ -197,6 +217,7 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun connect() {
         if (isConnected) {
             Log.w("ColmiRing", "Já conectado, ignorando nova tentativa de conexão.")
@@ -215,12 +236,14 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun disconnect() {
         Log.d("ColmiRing", "Chamando disconnect no GATT.")
         connectionTimeoutJob?.cancel()
         bluetoothGatt?.disconnect()
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun cleanup() {
         Log.d("ColmiRing", "Executando cleanup: Fechando GATT e limpando recursos.")
         bluetoothGatt?.close()
@@ -231,6 +254,7 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         isReady = false
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun sendCommand(commandBytes: ByteArray): Boolean {
         if (!isReadyToSendCommands()) {
             Log.e("ColmiRing", "Dispositivo não está pronto para enviar comandos. Status: conectado=$isConnected, pronto=$isReady. Comando: ${commandBytes.joinToString { String.format("%02X", it) }}")
@@ -297,16 +321,20 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
                 when (secondByte) {
                     0x01 -> {
                         val (raw, a, b, c) = parseRawSpO2SensorData(data)
+                        _rawSpO2Data.tryEmit(Quadruple(raw, a, b, c))
                         Log.d("ColmiRing", "SpO2 Bruto: RAW=${raw}, A=${a}, B=${b}, C=${c}")
                     }
                     0x02 -> {
                         val (raw, max, min, diff) = parseRawPpgSensorData(data)
+                        _rawPpgData.tryEmit(Quadruple(raw, max, min, diff))
                         Log.d("ColmiRing", "PPG Bruto: RAW=${raw}, Max=${max}, Min=${min}, Diff=${diff}")
                     }
                     0x03 -> {
-                        val (rawX, rawY, rawZ) = parseRawAccelerometerSensorData(data)
-                        val emitSuccess = _accelerometerData.tryEmit(Triple(rawX, rawY, rawZ))
-                        Log.d("ColmiRing", "DEBUG_ACCEL_EMIT: Emitindo X=${rawX}, Y=${rawY}, Z=${rawZ}. Sucesso da emissão: $emitSuccess")
+                        val (accelTriple, magnitude) = parseRawAccelerometerSensorData(data)
+                        val (rawX, rawY, rawZ) = accelTriple
+                        val emitted = _accelerometerData.tryEmit(Triple(rawX, rawY, rawZ))
+                        Log.d(TAG, "Magnitude do vetor: $magnitude m/s²")
+                        Log.d(TAG, "DEBUG_ACCEL_EMIT: Emitindo X=$rawX, Y=$rawY, Z=$rawZ. Sucesso: $emitted")
                     }
                     else -> Log.d("ColmiRing", "Subtipo de Sensor Bruto desconhecido: 0x${secondByte.toString(16)}")
                 }
@@ -364,7 +392,7 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     }
 
     private fun parseRawSpO2SensorData(data: ByteArray): Quadruple<Int, Int, Int, Int> {
-        val blood = (data[2].toInt() and 0xFF shl 8) or (data[3].toInt() and 0xFF)
+        val blood = (data[2].toInt() and 0xFF shl 8) or data[3].toInt()
         val max1 = data[5].toInt() and 0xFF
         val max2 = data[7].toInt() and 0xFF
         val max3 = data[9].toInt() and 0xFF
@@ -372,17 +400,45 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     }
 
     private fun parseRawPpgSensorData(data: ByteArray): Quadruple<Int, Int, Int, Int> {
-        val raw = (data[2].toInt() and 0xFF shl 8) or (data[3].toInt() and 0xFF)
-        val max = (data[4].toInt() and 0xFF shl 8) or (data[5].toInt() and 0xFF)
-        val min = (data[6].toInt() and 0xFF shl 8) or (data[7].toInt() and 0xFF)
-        val diff = (data[8].toInt() and 0xFF shl 8) or (data[9].toInt() and 0xFF)
+        val raw = (data[2].toInt() and 0xFF shl 8) or data[3].toInt()
+        val max = (data[4].toInt() and 0xFF shl 8) or data[5].toInt()
+        val min = (data[6].toInt() and 0xFF shl 8) or data[7].toInt()
+        val diff = (data[8].toInt() and 0xFF shl 8) or data[9].toInt()
         return Quadruple(raw, max, min, diff)
     }
 
-    private fun parseRawAccelerometerSensorData(data: ByteArray): Triple<Int, Int, Int> {
-        val rawY = ((data[2].toInt() and 0xFF shl 4) or (data[3].toInt() and 0xF)).toSigned(12)
-        val rawZ = ((data[4].toInt() and 0xFF shl 4) or (data[5].toInt() and 0xF)).toSigned(12)
-        val rawX = ((data[6].toInt() and 0xFF shl 4) or (data[7].toInt() and 0xF)).toSigned(12)
-        return Triple(rawX, rawY, rawZ)
+    private fun parseRawAccelerometerSensorData(
+        data: ByteArray,
+        bias: Triple<Int, Int, Int> = Triple(0, 0, 0)
+    ): Pair<Triple<Float, Float, Float>, Float> {
+        val rawXcounts = (
+                (data[2].toInt() and 0xFF shl 4) or
+                        ((data[3].toInt() and 0xF0) shr 4)
+                ).toSigned(12) - bias.first
+
+        val rawYcounts = (
+                ((data[3].toInt() and 0x0F) shl 8) or
+                        (data[4].toInt() and 0xFF)
+                ).toSigned(12) - bias.second
+
+        val rawZcounts = (
+                (data[5].toInt() and 0xFF shl 4) or
+                        ((data[6].toInt() and 0xF0) shr 4)
+                ).toSigned(12) - bias.third
+
+
+        val countsPerG = 2048f / 2f
+        val mps2PerG  = 9.80665f
+        val scale     = mps2PerG / countsPerG
+
+
+        val accelX = rawXcounts * scale
+        val accelY = rawYcounts * scale
+        val accelZ = rawZcounts * scale
+
+
+        val magnitude = sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ)
+
+        return Pair(Triple(accelX, accelY, accelZ), magnitude)
     }
 }

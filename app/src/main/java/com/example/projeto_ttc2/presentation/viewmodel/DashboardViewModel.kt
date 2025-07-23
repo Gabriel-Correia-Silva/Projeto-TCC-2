@@ -93,8 +93,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun triggerEmergencyActions(context: Context, emergencyContact: String?) {
-        // TODO: Implementar notificação para o médico (ex: via Push com Firebase)
-        // notifyDoctorAboutHeartRatePeak()
+
 
         emergencyContact?.let { phone ->
             val callIntent = Intent(Intent.ACTION_CALL).apply {
@@ -104,7 +103,7 @@ class DashboardViewModel @Inject constructor(
             try {
                 context.startActivity(callIntent)
             } catch (e: SecurityException) {
-                // Lidar com o caso de a permissão CALL_PHONE não ter sido concedida
+        
             }
         }
         dismissHeartRateAlert()

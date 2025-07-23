@@ -196,7 +196,7 @@ fun HeartRateLineChart(
         val chartWidth = size.width - yAxisSpace
         val chartHeight = size.height - xAxisSpace
 
-        // Eixo Y e linhas de grade
+        
         (0..4).forEach { i ->
             val value = minBpm + (range / 4) * i
             val y = chartHeight - ((value - minBpm) / range) * chartHeight
@@ -214,7 +214,7 @@ fun HeartRateLineChart(
             )
         }
 
-        // Eixo X
+       
         (0..23 step 6).forEach { hour ->
             val x = yAxisSpace + (chartWidth / 24 * hour)
             drawContext.canvas.nativeCanvas.drawText(
@@ -232,7 +232,7 @@ fun HeartRateLineChart(
             Offset(x.toFloat(), y)
         }
 
-        // Preenchimento (área)
+       
         val fillPath = Path().apply {
             moveTo(yAxisSpace, chartHeight)
             points.forEach { lineTo(it.x, it.y) }
@@ -247,14 +247,14 @@ fun HeartRateLineChart(
             )
         )
 
-        // Linha do gráfico
+        
         val linePath = Path().apply {
             moveTo(points.first().x, points.first().y)
             points.forEach { lineTo(it.x, it.y) }
         }
         drawPath(path = linePath, color = primaryColor, style = Stroke(width = 2.dp.toPx()))
 
-        // Indicador do ponto selecionado
+
         selectedHeartRate?.let {
             val timeOfDayMillis = it.timestamp - startOfDay
             val pointX = yAxisSpace + (chartWidth * timeOfDayMillis / (endOfDay - startOfDay))

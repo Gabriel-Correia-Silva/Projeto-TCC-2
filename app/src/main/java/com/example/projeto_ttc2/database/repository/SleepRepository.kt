@@ -14,6 +14,7 @@ import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -55,8 +56,8 @@ class SleepRepository @Inject constructor(
                 sonoEntities.add(
                     Sono(
                         healthConnectId = record.metadata.id,
-                        startTime = record.startTime,
-                        endTime = record.endTime,
+                        startTime = Date.from(record.startTime),
+                        endTime = Date.from(record.endTime),
                         durationMinutes = java.time.Duration.between(record.startTime, record.endTime).toMinutes(),
                         awakeDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },
                         remSleepDurationMinutes = record.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_REM }.sumOf { java.time.Duration.between(it.startTime, it.endTime).toMinutes() },

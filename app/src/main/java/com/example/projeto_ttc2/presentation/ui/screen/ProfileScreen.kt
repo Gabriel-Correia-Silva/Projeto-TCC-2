@@ -67,7 +67,7 @@ fun ProfileScreen(
         }
     }
 
-    // DatePicker Dialog
+    
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = editedBirthDate?.atStartOfDay(TimeZone.getDefault().toZoneId())?.toInstant()?.toEpochMilli()
@@ -112,13 +112,13 @@ fun ProfileScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Exibe o ID de Partilha se o utilizador for um supervisor
+           
             if (userRole is UserRole.Supervisor && user?.supervisorShareId != null) {
                 ShareIdCard(shareId = user.supervisorShareId, context = context, snackbarHostState = snackbarHostState)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Campo de Nome
+           
             OutlinedTextField(
                 value = editedFullName,
                 onValueChange = { editedFullName = it },
@@ -127,7 +127,7 @@ fun ProfileScreen(
                 singleLine = true
             )
 
-            // Campo de Data de Nascimento
+            
             OutlinedTextField(
                 value = editedBirthDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "Selecione a data",
                 onValueChange = {},

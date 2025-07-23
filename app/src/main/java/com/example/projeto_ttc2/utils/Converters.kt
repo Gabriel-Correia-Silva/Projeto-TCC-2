@@ -4,8 +4,7 @@ import androidx.room.TypeConverter
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import java.util.Date // Import java.util.Date
-
+import java.util.Date
 class Converters {
     @TypeConverter
     fun fromTimestamp(value: Long?): Instant? {
@@ -17,7 +16,7 @@ class Converters {
         return date?.toEpochMilli()
     }
 
-    // New Type Converters for java.util.Date
+
     @TypeConverter
     fun fromDate(value: Long?): Date? {
         return value?.let { Date(it) }

@@ -1,7 +1,7 @@
 package com.example.projeto_ttc2.database.repository
 
 import com.example.projeto_ttc2.database.entities.*
-import com.google.firebase.firestore.FirebaseFirestore // Adicione este import
+import com.google.firebase.firestore.FirebaseFirestore 
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 

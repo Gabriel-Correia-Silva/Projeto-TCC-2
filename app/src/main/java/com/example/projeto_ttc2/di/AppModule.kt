@@ -4,7 +4,25 @@ import android.content.Context
 import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.*
-import com.example.projeto_ttc2.database.repository.*
+import com.example.projeto_ttc2.database.entities.*
+import com.example.projeto_ttc2.database.repository.AuthRepository
+import com.example.projeto_ttc2.database.repository.BleSensorDataRepository
+import com.example.projeto_ttc2.database.repository.BleSensorPreferencesRepository
+import com.example.projeto_ttc2.database.repository.CaloriesRepository
+import com.example.projeto_ttc2.database.repository.EmergencyContactRepository
+import com.example.projeto_ttc2.database.repository.FeedbackRepository
+import com.example.projeto_ttc2.database.repository.FirebaseHealthDataRepository
+import com.example.projeto_ttc2.database.repository.FirebaseHealthDataRepositoryImpl
+import com.example.projeto_ttc2.database.repository.HealthConnectManager
+import com.example.projeto_ttc2.database.repository.HeartRateRepository
+import com.example.projeto_ttc2.database.repository.OxygenSaturationRepository
+import com.example.projeto_ttc2.database.repository.SensorRepository
+import com.example.projeto_ttc2.database.repository.SleepRepository
+import com.example.projeto_ttc2.database.repository.StepsRepository
+import com.example.projeto_ttc2.database.repository.SyncRepository
+import com.example.projeto_ttc2.database.repository.UserPreferencesRepository
+import com.example.projeto_ttc2.database.repository.UserRepository
+import com.example.projeto_ttc2.database.repository.UserRepositoryImpl
 import com.example.projeto_ttc2.network.ApiService
 import com.example.projeto_ttc2.network.InstantAdapter
 import com.google.firebase.auth.FirebaseAuth
@@ -79,7 +97,7 @@ object AppModule {
             .create()
 
         return Retrofit.Builder()
-            .baseUrl("http://192.168.0.5:8000/")
+            .baseUrl("http://192.168.0.9:8000/")
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(ApiService::class.java)
@@ -106,7 +124,6 @@ object AppModule {
     fun provideBleSensorDataRepository(): BleSensorDataRepository {
         return BleSensorDataRepository()
     }
-
     @Provides
     @Singleton
     fun provideAuthRepository(auth: FirebaseAuth, firestore: FirebaseFirestore): AuthRepository = AuthRepository(auth, firestore)
@@ -212,7 +229,8 @@ object AppModule {
         oxygenSaturationRepository: OxygenSaturationRepository,
         sensorRepository: SensorRepository,
         apiService: ApiService,
-        firebaseAuth: FirebaseAuth
+        firebaseAuth: FirebaseAuth,
+        bleSensorDataRepository: BleSensorDataRepository
     ): SyncRepository {
         return SyncRepository(
             firestore,
@@ -223,7 +241,8 @@ object AppModule {
             oxygenSaturationRepository,
             sensorRepository,
             apiService,
-            firebaseAuth
+            firebaseAuth,
+            bleSensorDataRepository
         )
     }
 }

@@ -80,7 +80,7 @@ class PatientDetailViewModel @Inject constructor(
                 feedbackRepository.sendFeedback(feedback)
                 _feedbackState.value = FeedbackState.Success
             } catch (e: Exception) {
-                _feedbackState.value = FeedbackState.Error(e.message ?: "Erro desconhecido") // Define o estado para Error
+                _feedbackState.value = FeedbackState.Error(e.message ?: "Erro desconhecido") 
             }
         }
     }

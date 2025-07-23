@@ -89,5 +89,7 @@ class SleepRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Falha ao sincronizar dados de sono", e)
         }
+
+
     }
 }

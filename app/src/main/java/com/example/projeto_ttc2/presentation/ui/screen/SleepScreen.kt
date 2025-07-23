@@ -146,11 +146,15 @@ fun SleepSummaryCard(sleepData: Sono?, stages: List<SleepStage>) {
             }
 
             if (stages.isNotEmpty() && sleepData != null) {
-                SleepTimelineBar(
-                    stages = stages,
-                    startTime = sleepData.startTime,
-                    endTime = sleepData.endTime
-                )
+                sleepData.startTime?.let {
+                    sleepData.endTime?.let { it1 ->
+                        SleepTimelineBar(
+                            stages = stages,
+                            startTime = it,
+                            endTime = it1
+                        )
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

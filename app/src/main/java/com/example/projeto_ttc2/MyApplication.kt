@@ -7,6 +7,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.projeto_ttc2.background.DataSyncWorker
+import com.example.projeto_ttc2.database.repository.AuthRepository // Importar
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -16,6 +17,10 @@ class MyApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    // Injetar o AuthRepository aqui para acesso global no Application
+    @Inject
+    lateinit var authRepository: AuthRepository // Adicione esta linha
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -34,7 +39,7 @@ class MyApplication : Application(), Configuration.Provider {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "DataSyncWork",
-            ExistingPeriodicWorkPolicy.KEEP, 
+            ExistingPeriodicWorkPolicy.KEEP,
             workRequest
         )
     }

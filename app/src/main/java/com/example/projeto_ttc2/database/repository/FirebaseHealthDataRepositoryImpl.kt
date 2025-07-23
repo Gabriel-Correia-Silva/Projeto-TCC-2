@@ -14,7 +14,7 @@ import javax.inject.Singleton
 
 @Singleton
 class FirebaseHealthDataRepositoryImpl @Inject constructor(
-    private val firestore: FirebaseFirestore
+    override val firestore: FirebaseFirestore // Corrigido com 'override'
 ) : FirebaseHealthDataRepository {
 
 
@@ -107,9 +107,6 @@ class FirebaseHealthDataRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * Busca o último registo de passos diários do utilizador.
-     */
     override fun getUserStepsData(userId: String): Flow<List<Passos>> = flow {
         if (userId.isNotBlank()) {
             val snapshot = firestore.collection("users").document(userId).collection("steps")

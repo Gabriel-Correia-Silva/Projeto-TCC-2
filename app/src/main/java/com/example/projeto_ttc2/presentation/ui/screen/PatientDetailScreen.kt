@@ -54,7 +54,6 @@ fun PatientDetailScreen(
     val stepsData by viewModel.stepsData.collectAsStateWithLifecycle()
     val heartRateData by viewModel.heartRateData.collectAsStateWithLifecycle()
     val sleepData by viewModel.sleepData.collectAsStateWithLifecycle()
-    // 1. Coletar o estado das calorias e do feedback
     val caloriesData by viewModel.caloriesData.collectAsStateWithLifecycle()
     val feedbackState by viewModel.feedbackState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -64,7 +63,6 @@ fun PatientDetailScreen(
     val tabs = listOf("Visão Geral", "Passos", "Frequência", "Sono", "Alertas")
 
 
-    // Efeito para exibir snackbar em caso de sucesso ou erro no envio do feedback
     LaunchedEffect(feedbackState) {
         when (val state = feedbackState) {
             is PatientDetailViewModel.FeedbackState.Success -> {
@@ -108,15 +106,14 @@ fun PatientDetailScreen(
                 when (selectedTabIndex) {
                     0 -> {
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                            // 2. Passar os dados dinâmicos para a OverviewTab
                             OverviewTab(
                                 viewModel = viewModel,
                                 authViewModel = authViewModel,
                                 stepsData = stepsData,
                                 heartRateData = heartRateData,
                                 sleepData = sleepData,
-                                caloriesData = caloriesData, // Passa os dados de calorias
-                                feedbackState = feedbackState // Passa o estado do feedback
+                                caloriesData = caloriesData,
+                                feedbackState = feedbackState
                             )
                         }
                     }
@@ -127,8 +124,7 @@ fun PatientDetailScreen(
                             SleepTab(sleepData)
                         }
                     }
-                    // 3. Deixamos claro que a tela de alertas ainda usa dados estáticos
-                    4 -> FallHistoryScreen() // ATENÇÃO: Esta tela ainda usa dados estáticos.
+                    4 -> FallHistoryScreen()
                 }
             }
         }
@@ -189,15 +185,15 @@ fun OverviewTab(
     stepsData: List<Passos>,
     heartRateData: List<BatimentoCardiaco>,
     sleepData: List<Sono>,
-    caloriesData: List<Calorias>, // Recebe os dados de calorias
-    feedbackState: PatientDetailViewModel.FeedbackState // Recebe o estado do feedback
+    caloriesData: List<Calorias>,
+    feedbackState: PatientDetailViewModel.FeedbackState
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val lastHeartRate = heartRateData.maxByOrNull { it.timestamp }
         val todaySteps = stepsData.find { it.data == LocalDate.now().toString() }?.contagem ?: 0L
-        val lastSleep = sleepData.maxByOrNull { it.endTime }
-        // 4. Calcular a última caloria registrada
-        val lastCalories = caloriesData.filter { it.tipo == "TOTAL" }.maxByOrNull { it.endTime }?.kilocalorias ?: 0.0
+        val lastSleep = sleepData.maxByOrNull { it.endTime!! }
+
+        val lastCalories = caloriesData.filter { it.tipo == "TOTAL" }.maxByOrNull { it.endTime!! }?.kilocalorias ?: 0.0
 
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SummaryCard(
@@ -205,7 +201,6 @@ fun OverviewTab(
                 label = "Passos Hoje",
                 value = todaySteps.toString(),
                 modifier = Modifier.weight(1f),
-                // 5. Utilizar cores do tema
                 color = MaterialTheme.colorScheme.stepsCard
             )
             SummaryCard(
@@ -230,7 +225,6 @@ fun OverviewTab(
             SummaryCard(
                 icon = Icons.Default.LocalFireDepartment,
                 label = "Calorias",
-                // 6. Exibir o valor dinâmico de calorias
                 value = if (lastCalories > 0) "%.0f".format(lastCalories) else "--",
                 unit = "kcal",
                 modifier = Modifier.weight(1f),
@@ -238,7 +232,6 @@ fun OverviewTab(
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        // 7. Passar o estado de feedback para o componente de input
         FeedbackInputCard(viewModel, authViewModel, feedbackState)
     }
 }
@@ -406,7 +399,7 @@ fun EmptyContentState(message: String) {
 fun FeedbackInputCard(
     viewModel: PatientDetailViewModel,
     authViewModel: AuthViewModel,
-    feedbackState: PatientDetailViewModel.FeedbackState // Recebe o estado
+    feedbackState: PatientDetailViewModel.FeedbackState
 ) {
     var feedbackText by remember { mutableStateOf("") }
     val currentUser = authViewModel.getCurrentUser()
@@ -436,10 +429,10 @@ fun FeedbackInputCard(
                     }
                 },
                 modifier = Modifier.align(Alignment.End),
-                // 8. Desabilitar o botão enquanto o feedback estiver sendo enviado
+
                 enabled = feedbackText.isNotBlank() && feedbackState != PatientDetailViewModel.FeedbackState.Loading
             ) {
-                // 9. Mostrar um indicador de progresso
+
                 if (feedbackState == PatientDetailViewModel.FeedbackState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
@@ -455,9 +448,6 @@ fun FeedbackInputCard(
     }
 }
 
-//=============== PREVIEWS ===============//
-
-//=============== PREVIEWS ===============//
 
 @Preview(showBackground = true)
 @Composable
@@ -467,41 +457,3 @@ private fun PatientHeaderPreview() {
     }
 }
 
-/*@Preview(showBackground = true)
-@Composable
-private fun SummaryCardPreview() {
-    ProjetoTTC2Theme {
-        SummaryCard(
-            icon = Icons.Default.DirectionsWalk,
-            label = "Passos Hoje",
-            value = "8,456",
-            modifier = Modifier.width(180.dp)
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SleepInfoRowPreview() {
-    ProjetoTTC2Theme {
-        SleepInfoRow("Sono Profundo", 125)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun EmptyContentStatePreview() {
-    ProjetoTTC2Theme {
-        EmptyContentState(message = "Nenhum dado para exibir.")
-    }
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 800)
-@Composable
-private fun PatientDetailScreenPreview() {
-    ProjetoTTC2Theme {
-        Surface {
-            PatientDetailScreen()
-        }
-    }
-}*/

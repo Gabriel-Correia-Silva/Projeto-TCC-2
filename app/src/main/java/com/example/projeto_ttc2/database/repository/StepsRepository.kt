@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await // Importar await
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -96,6 +97,24 @@ class StepsRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Falha ao sincronizar dados de passos", e)
+        }
+    }
+
+    // Novo método para fazer upsert de passos do BLE
+    suspend fun upsertStepsFromBle(passos: Passos) {
+        try {
+            passosDao.upsert(passos)
+            Log.d(TAG, "Passos do BLE upserted no Room: ${passos.contagem} para ${passos.data}")
+
+            val userId = firebaseAuth.currentUser?.uid
+            if (userId != null && userId.isNotEmpty()) {
+                val batch = firebaseHealthDataRepository.firestore.batch()
+                firebaseHealthDataRepository.syncStepsData(userId, listOf(passos), batch)
+                batch.commit().await()
+                Log.d(TAG, "Passos do BLE sincronizados com Firestore: ${passos.contagem}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao fazer upsert de passos do BLE: ${e.message}", e)
         }
     }
 }

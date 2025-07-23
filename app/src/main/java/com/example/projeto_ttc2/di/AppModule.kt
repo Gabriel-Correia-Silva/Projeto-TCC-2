@@ -79,7 +79,7 @@ object AppModule {
             .create()
 
         return Retrofit.Builder()
-            .baseUrl("http://192.168.0.5:8000/") // Certifique-se de que este IP está correto
+            .baseUrl("http://192.168.0.5:8000/")
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
             .create(ApiService::class.java)
@@ -93,6 +93,18 @@ object AppModule {
     @Singleton
     fun provideUserPreferencesRepository(@ApplicationContext context: Context): UserPreferencesRepository {
         return UserPreferencesRepository(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBleSensorPreferencesRepository(@ApplicationContext context: Context): BleSensorPreferencesRepository {
+        return BleSensorPreferencesRepository(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBleSensorDataRepository(): BleSensorDataRepository {
+        return BleSensorDataRepository()
     }
 
     @Provides

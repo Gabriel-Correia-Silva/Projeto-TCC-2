@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await // Importar await
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -85,6 +86,25 @@ class HeartRateRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Falha ao sincronizar dados de frequência cardíaca", e)
+        }
+    }
+
+
+    suspend fun insertHeartRateFromBle(batimento: BatimentoCardiaco) {
+        try {
+            batimentoCardiacoDao.insertAll(listOf(batimento)) // Insere no Room
+            Log.d(TAG, "Batimento cardíaco do BLE inserido no Room: ${batimento.bpm}")
+
+            val userId = firebaseAuth.currentUser?.uid
+            if (userId != null && userId.isNotEmpty()) {
+
+                val batch = firebaseHealthDataRepository.firestore.batch()
+                firebaseHealthDataRepository.syncHeartRateData(userId, listOf(batimento), batch)
+                batch.commit().await()
+                Log.d(TAG, "Batimento cardíaco do BLE sincronizado com Firestore: ${batimento.bpm}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao inserir batimento cardíaco do BLE: ${e.message}", e)
         }
     }
 }

@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await // Importar await
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
@@ -67,6 +68,23 @@ class OxygenSaturationRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Falha ao sincronizar dados de SpO2", e)
+        }
+    }
+
+    suspend fun insertOxygenSaturationFromBle(oxigenacao: OxigenacaoSanguinea) {
+        try {
+            oxigenacaoSanguineaDao.insertAll(listOf(oxigenacao))
+            Log.d(TAG, "Oxigenação do BLE inserida no Room: ${oxigenacao.spo2}")
+
+            val userId = firebaseAuth.currentUser?.uid
+            if (userId != null && userId.isNotEmpty()) {
+                val batch = firebaseHealthDataRepository.firestore.batch()
+                firebaseHealthDataRepository.syncOxygenSaturationData(userId, listOf(oxigenacao), batch)
+                batch.commit().await()
+                Log.d(TAG, "Oxigenação do BLE sincronizada com Firestore: ${oxigenacao.spo2}")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Falha ao inserir oxigenação do BLE: ${e.message}", e)
         }
     }
 }

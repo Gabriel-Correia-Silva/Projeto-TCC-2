@@ -1,10 +1,13 @@
 package com.example.projeto_ttc2.database.repository
 
 import com.example.projeto_ttc2.database.entities.*
+import com.google.firebase.firestore.FirebaseFirestore // Adicione este import
 import com.google.firebase.firestore.WriteBatch
 import kotlinx.coroutines.flow.Flow
 
 interface FirebaseHealthDataRepository {
+    val firestore: FirebaseFirestore
+
     suspend fun syncHeartRateData(userId: String, heartRateData: List<BatimentoCardiaco>, batch: WriteBatch)
     suspend fun syncStepsData(userId: String, stepsData: List<Passos>, batch: WriteBatch)
     suspend fun syncSleepData(userId: String, sleepData: List<Sono>, batch: WriteBatch)

@@ -36,7 +36,7 @@ class SleepMonitoringService : LifecycleService() {
         const val ACTION_STOP_MONITORING = "ACTION_STOP_MONITORING"
         private const val NOTIFICATION_ID = 3
         private const val CHANNEL_ID = "SleepMonitoringChannel"
-        private const val SLEEP_THRESHOLD_MINUTES = 600L // 10 horas
+        private const val SLEEP_THRESHOLD_MINUTES = 600L
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

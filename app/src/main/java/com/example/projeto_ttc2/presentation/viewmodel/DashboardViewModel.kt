@@ -30,9 +30,10 @@ class DashboardViewModel @Inject constructor(
     private val oxygenSaturationRepository: OxygenSaturationRepository,
     private val feedbackRepository: FeedbackRepository,
     private val authRepository: AuthRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val bleSensorDataRepository: BleSensorDataRepository,
+    private val bleSensorPreferencesRepository: BleSensorPreferencesRepository
 ) : ViewModel() {
-
 
     val heartRateThreshold: StateFlow<Long> = userPreferencesRepository.heartRateThreshold
     val stepGoal: StateFlow<Long> = userPreferencesRepository.stepGoal
@@ -43,13 +44,33 @@ class DashboardViewModel @Inject constructor(
     private val _showHeartRateAlert = MutableStateFlow(false)
     val showHeartRateAlert: StateFlow<Boolean> = _showHeartRateAlert.asStateFlow()
 
-    val latestHeartRate: StateFlow<Long> = heartRateRepository.getLatestHeartRate()
-        .onEach { rate ->
-            if (rate > heartRateThreshold.value) {
-                _showHeartRateAlert.value = true
-            }
+    val latestHeartRate: StateFlow<Long> = bleSensorPreferencesRepository.overrideHealthConnect.flatMapLatest { overrideEnabled ->
+        if (overrideEnabled) {
+            bleSensorDataRepository.latestHeartRate
+        } else {
+            heartRateRepository.getLatestHeartRate()
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+    }.onEach { rate ->
+        if (rate > heartRateThreshold.value) {
+            _showHeartRateAlert.value = true
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val todaySteps: StateFlow<Long> = bleSensorPreferencesRepository.overrideHealthConnect.flatMapLatest { overrideEnabled ->
+        if (overrideEnabled) {
+            bleSensorDataRepository.latestBleSteps
+        } else {
+            stepsRepository.getTodayStepsFlow()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val latestOxygenSaturation: StateFlow<Double> = bleSensorPreferencesRepository.overrideHealthConnect.flatMapLatest { overrideEnabled ->
+        if (overrideEnabled) {
+            bleSensorDataRepository.latestSpo2
+        } else {
+            oxygenSaturationRepository.getLatestOxygenSaturation()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     fun setHeartRateThreshold(threshold: Long) {
         userPreferencesRepository.setHeartRateThreshold(threshold)
@@ -80,9 +101,6 @@ class DashboardViewModel @Inject constructor(
     private val _totalStepsForPeriod = MutableStateFlow(0L)
     val totalStepsForPeriod: StateFlow<Long> = _totalStepsForPeriod.asStateFlow()
 
-    val latestOxygenSaturation: StateFlow<Double> = oxygenSaturationRepository.getLatestOxygenSaturation()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
     val unreadFeedbackCount: StateFlow<Int> =
         authRepository.getCurrentUserFlow().flatMapLatest { user ->
             feedbackRepository.getUnreadFeedbackCount(user?.uid ?: "")
@@ -93,8 +111,6 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun triggerEmergencyActions(context: Context, emergencyContact: String?) {
-
-
         emergencyContact?.let { phone ->
             val callIntent = Intent(Intent.ACTION_CALL).apply {
                 data = Uri.parse("tel:$phone")
@@ -103,7 +119,7 @@ class DashboardViewModel @Inject constructor(
             try {
                 context.startActivity(callIntent)
             } catch (e: SecurityException) {
-        
+                // Handle exception
             }
         }
         dismissHeartRateAlert()
@@ -148,15 +164,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    val todaySteps: StateFlow<Long> = stepsRepository.getTodayStepsFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-
     val latestSleepSession: StateFlow<Sono?> = sleepRepository.getLatestSleepSession()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val latestSleepSessionWithStages: StateFlow<SonoWithStages?> = sleepRepository.getLatestSleepSessionWithStages()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
 
     val todayActiveCalories: StateFlow<Double> = caloriesRepository.getTodayActiveCalories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)

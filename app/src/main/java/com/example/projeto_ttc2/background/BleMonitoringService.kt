@@ -37,11 +37,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
@@ -62,6 +62,8 @@ class BleMonitoringService : Service() {
     lateinit var bleSensorPreferencesRepository: BleSensorPreferencesRepository
     @Inject
     lateinit var bleSensorDataRepository: BleSensorDataRepository
+    @Inject
+    lateinit var bleConnectionManager: BleConnectionManager
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var commandJob: Job? = null
@@ -104,6 +106,14 @@ class BleMonitoringService : Service() {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     private fun startBleMonitoring() {
+        val pausedUntil = bleSensorPreferencesRepository.monitoringPausedUntil.value
+        if (pausedUntil > System.currentTimeMillis()) {
+            Log.d(TAG, "Monitoramento pausado. Serviço não será iniciado.")
+            stopSelf()
+            return
+        }
+
+        bleConnectionManager.setServiceRunning(true)
         val notification = createNotification().build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -138,6 +148,7 @@ class BleMonitoringService : Service() {
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun startDataJobs() {
         val connector = colmiRingConnector ?: return
 
@@ -156,7 +167,8 @@ class BleMonitoringService : Service() {
 
         commandJob = serviceScope.launch {
             connector.connectionStatus.filter { it }.first()
-            Log.d(TAG, "Conexão pronta. A iniciar ciclo de comandos.")
+            Log.d(TAG, "Conexão pronta. A enviar comandos de ativação.")
+            delay(500)
 
             if (bleSensorPreferencesRepository.accelerometerEnabled.value) {
                 connector.sendCommand(Command.ENABLE_ALL_RAW_DATA)
@@ -165,39 +177,62 @@ class BleMonitoringService : Service() {
             }
             delay(200)
 
-            var lastHrRequestTime = 0L
-            var lastSpo2RequestTime = 0L
-            var lastGeneralRequestTime = 0L
-
-            while (isActive) {
-                val currentTime = System.currentTimeMillis()
-
-                val hrInterval = bleSensorPreferencesRepository.heartRateInterval.value * 1000L
-                val spo2Interval = bleSensorPreferencesRepository.spo2Interval.value * 1000L
-
-                if (bleSensorPreferencesRepository.heartRateEnabled.value && (currentTime - lastHrRequestTime) >= hrInterval) {
-                    connector.sendCommand(Command.REQUEST_HEART_RATE)
-                    lastHrRequestTime = currentTime
-                    delay(200)
-                }
-
-                if (bleSensorPreferencesRepository.spo2Enabled.value && (currentTime - lastSpo2RequestTime) >= spo2Interval) {
-                    connector.sendCommand(Command.REQUEST_SPO2)
-                    lastSpo2RequestTime = currentTime
-                    delay(200)
-                }
-
-                if ((currentTime - lastGeneralRequestTime) >= 30000) { // General data every 30 seconds
-                    if (bleSensorPreferencesRepository.stepsGeneralEnabled.value) {
-                        connector.sendCommand(Command.SYNC_HISTORICAL_STEPS)
-                        delay(200)
-                    }
-                    connector.sendCommand(Command.GET_BATTERY_STATE)
-                    lastGeneralRequestTime = currentTime
-                }
-
-                delay(1000)
+            if (bleSensorPreferencesRepository.heartRateEnabled.value) {
+                connector.sendCommand(Command.SET_HEART_RATE_MONITORING_INTERVAL)
             }
+            delay(200)
+
+            if (bleSensorPreferencesRepository.spo2Enabled.value) {
+                connector.sendCommand(Command.ENABLE_SPO2_MONITORING)
+            } else {
+                connector.sendCommand(Command.DISABLE_SPO2_MONITORING)
+            }
+            delay(200)
+
+            // Inicia o ciclo único de pedidos sequenciais
+            sequentialRequestLoop(connector)
+        }
+    }
+
+    private suspend fun sequentialRequestLoop(connector: ColmiRingConnector) {
+        var lastHrRequestTime = 0L
+        var lastSpo2RequestTime = 0L
+        var lastGeneralRequestTime = 0L
+
+        while (serviceScope.isActive) {
+            val currentTime = System.currentTimeMillis()
+            val hrInterval = bleSensorPreferencesRepository.heartRateInterval.value * 1000L
+            val spo2Interval = bleSensorPreferencesRepository.spo2Interval.value * 1000L
+
+            // Pedido de Frequência Cardíaca
+            if (bleSensorPreferencesRepository.heartRateEnabled.value && (currentTime - lastHrRequestTime) >= hrInterval) {
+                Log.d(TAG, "A pedir leitura de frequência cardíaca...")
+                connector.sendCommand(Command.REQUEST_HEART_RATE)
+                withTimeoutOrNull(10000L) { connector.heartRateData.first() }
+                lastHrRequestTime = System.currentTimeMillis()
+                delay(200)
+            }
+
+            // Pedido de SpO2
+            if (bleSensorPreferencesRepository.spo2Enabled.value && (currentTime - lastSpo2RequestTime) >= spo2Interval) {
+                Log.d(TAG, "A pedir leitura de SpO2...")
+                connector.sendCommand(Command.REQUEST_SPO2)
+                withTimeoutOrNull(10000L) { connector.spO2PercentageData.first() }
+                lastSpo2RequestTime = System.currentTimeMillis()
+                delay(200)
+            }
+
+            // Pedidos Gerais
+            if ((currentTime - lastGeneralRequestTime) >= 30000) {
+                if (bleSensorPreferencesRepository.stepsGeneralEnabled.value) {
+                    connector.sendCommand(Command.SYNC_HISTORICAL_STEPS)
+                    delay(200)
+                }
+                connector.sendCommand(Command.GET_BATTERY_STATE)
+                lastGeneralRequestTime = System.currentTimeMillis()
+            }
+
+            delay(1000)
         }
     }
 
@@ -215,6 +250,7 @@ class BleMonitoringService : Service() {
 
     private fun CoroutineScope.startHeartRateCollector(connector: ColmiRingConnector) = launch {
         connector.heartRateData.collect { bpm ->
+            Log.d(TAG, "Dados recebidos - Frequência Cardíaca: $bpm BPM")
             val userId = getUserId()
             val heartRateObject = BatimentoCardiaco(System.currentTimeMillis(), "BLE_${UUID.randomUUID()}", bpm.toLong(), userId = userId ?: "")
             bleSensorDataRepository.updateHeartRate(heartRateObject)
@@ -229,6 +265,7 @@ class BleMonitoringService : Service() {
 
     private fun CoroutineScope.startSpo2Collector(connector: ColmiRingConnector) = launch {
         connector.spO2PercentageData.collect { spo2 ->
+            Log.d(TAG, "Dados recebidos - SpO2: $spo2%")
             val userId = getUserId()
             val spo2Object = OxigenacaoSanguinea(System.currentTimeMillis(), "BLE_${UUID.randomUUID()}", spo2.toDouble(), userId = userId ?: "")
             bleSensorDataRepository.updateSpo2(spo2Object)
@@ -240,6 +277,7 @@ class BleMonitoringService : Service() {
             val userId = getUserId()
             val passos = Passos(LocalDate.now().toString(), steps.toLong(), userId = userId ?: "")
             stepsRepository.upsertStepsFromBle(passos)
+            bleSensorDataRepository.updateSteps(steps.toLong())
         }
     }
 
@@ -284,12 +322,16 @@ class BleMonitoringService : Service() {
         return authRepository.getCurrentUserFlow().first()?.uid
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun stopBleMonitoring() {
         Log.d(TAG, "A parar o monitoramento BLE.")
+        bleConnectionManager.setServiceRunning(false)
         commandJob?.cancel()
         dataCollectorJob?.cancel()
         serviceScope.launch {
             colmiRingConnector?.sendCommand(Command.DISABLE_ALL_RAW_DATA)
+            delay(200)
+            colmiRingConnector?.sendCommand(Command.DISABLE_SPO2_MONITORING)
             delay(500)
             colmiRingConnector?.disconnect()
         }
@@ -326,8 +368,10 @@ class BleMonitoringService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onDestroy() {
         super.onDestroy()
+        bleConnectionManager.setServiceRunning(false)
         commandJob?.cancel()
         dataCollectorJob?.cancel()
         serviceScope.cancel()

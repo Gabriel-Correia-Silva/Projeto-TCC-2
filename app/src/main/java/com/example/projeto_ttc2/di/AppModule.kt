@@ -2,6 +2,7 @@ package com.example.projeto_ttc2.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.projeto_ttc2.background.BleConnectionManager
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.*
 import com.example.projeto_ttc2.database.repository.AuthRepository
@@ -120,6 +121,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideBleSensorDataRepository(): BleSensorDataRepository {
+        return BleSensorDataRepository()
+    }
+
+    @Provides
+    @Singleton
     fun provideAuthRepository(auth: FirebaseAuth, firestore: FirebaseFirestore): AuthRepository = AuthRepository(auth, firestore)
 
     @Provides
@@ -224,7 +231,8 @@ object AppModule {
         sensorRepository: SensorRepository,
         apiService: ApiService,
         firebaseAuth: FirebaseAuth,
-        bleSensorDataRepository: BleSensorDataRepository
+        bleSensorDataRepository: BleSensorDataRepository,
+        bleSensorPreferencesRepository: BleSensorPreferencesRepository
     ): SyncRepository {
         return SyncRepository(
             firestore,
@@ -236,7 +244,8 @@ object AppModule {
             sensorRepository,
             apiService,
             firebaseAuth,
-            bleSensorDataRepository
+            bleSensorDataRepository,
+            bleSensorPreferencesRepository
         )
     }
 }

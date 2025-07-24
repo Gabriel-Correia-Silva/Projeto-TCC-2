@@ -58,7 +58,7 @@ fun AppNavigation(
                 "sleep_screen", "emergency_contacts_screen", "heart_rate_detail_screen",
                 "steps_detail_screen", "profile_screen", "night_monitoring_screen",
                 "professional_screen", "feedback_list_screen", "sensors_settings_screen",
-                "ble_sensor_settings_screen"
+                "ble_sensor_settings_screen", "sensor_data_screen"
             )
             val isDashboard = currentRoute in listOf("supervisor_dashboard", "supervised_dashboard")
             if (currentRoute in routesWithHeader) {
@@ -76,7 +76,8 @@ fun AppNavigation(
                         "professional_screen" -> "Profissional"
                         "feedback_list_screen" -> "Centro de Feedback"
                         "sensors_settings_screen" -> "Metas e Alertas"
-                        "ble_sensor_settings_screen" -> "Sensores do Anel Colmi" 
+                        "ble_sensor_settings_screen" -> "Sensores do Anel Colmi"
+                        "sensor_data_screen" -> "Dados dos Sensores"
                         else -> "App"
                     },
                     showBackArrow = !isDashboard,
@@ -229,7 +230,7 @@ fun AppNavigation(
             composable("sensors_settings_screen") { SensorsSettingsScreen() }
             composable("feedback_list_screen") { FeedbackListScreen() }
             composable("emergency_contacts_screen") { EmergencyContactsScreen(viewModel = emergencyContactViewModel) }
-            composable("ble_sensor_settings_screen") { BleSensorSettingsScreen() } 
+            composable("ble_sensor_settings_screen") { BleSensorSettingsScreen() }
 
             composable("sleep_screen") {
                 SleepScreen(

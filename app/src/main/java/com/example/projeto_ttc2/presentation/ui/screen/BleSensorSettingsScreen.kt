@@ -2,6 +2,8 @@ package com.example.projeto_ttc2.presentation.ui.screen
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,8 +29,8 @@ fun BleSensorSettingsScreen(
     val accelerometerEnabled by viewModel.accelerometerEnabled.collectAsStateWithLifecycle()
     val heartRateEnabled by viewModel.heartRateEnabled.collectAsStateWithLifecycle()
     val spo2Enabled by viewModel.spo2Enabled.collectAsStateWithLifecycle()
-    val stressEnabled by viewModel.stressEnabled.collectAsStateWithLifecycle()
     val stepsGeneralEnabled by viewModel.stepsGeneralEnabled.collectAsStateWithLifecycle()
+    val overrideHealthConnect by viewModel.overrideHealthConnect.collectAsStateWithLifecycle()
 
     val heartRateInterval by viewModel.heartRateInterval.collectAsStateWithLifecycle()
     val spo2Interval by viewModel.spo2Interval.collectAsStateWithLifecycle()
@@ -36,10 +38,12 @@ fun BleSensorSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
@@ -54,7 +58,16 @@ fun BleSensorSettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+            SensorToggleItem(
+                label = "Sobrepor dados do Health Connect",
+                description = "Se ativado, os dados do anel (passos, FC, etc.) substituirão os dados do Health Connect.",
+                checked = overrideHealthConnect,
+                onCheckedChange = { viewModel.setOverrideHealthConnect(it) }
+            )
+
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
 
             SensorToggleItem(
                 label = "Passos, Calorias e Distância (Geral)",
@@ -63,16 +76,12 @@ fun BleSensorSettingsScreen(
                 onCheckedChange = { viewModel.setStepsGeneralEnabled(it) }
             )
 
-            Divider()
-
             SensorToggleItem(
                 label = "Acelerômetro (para quedas)",
                 description = "Ativa a coleta de dados brutos de movimento.",
                 checked = accelerometerEnabled,
                 onCheckedChange = { viewModel.setAccelerometerEnabled(it) }
             )
-
-            Divider()
 
             SensorToggleItem(
                 label = "Frequência Cardíaca",
@@ -102,14 +111,16 @@ fun BleSensorSettingsScreen(
             AnimatedVisibility(visible = spo2Enabled) {
                 IntervalSlider(
                     label = "Intervalo de Leitura (SpO2)",
-                    value = (spo2Interval / 60).toFloat(), // Convert seconds to minutes for slider
-                    onValueChange = { viewModel.setSpo2Interval(it.roundToInt() * 60) }, // Convert minutes back to seconds
+                    value = (spo2Interval / 60).toFloat(),
+                    onValueChange = { viewModel.setSpo2Interval(it.roundToInt() * 60) },
                     range = 1f..30f,
                     steps = 28,
                     unit = "minutos"
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = { viewModel.applySettingsAndRestartService(context) },

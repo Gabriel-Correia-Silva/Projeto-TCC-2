@@ -28,6 +28,9 @@ class BleSensorDataRepository @Inject constructor() {
     private val _latestBattery = MutableStateFlow(Pair(0, false))
     val latestBattery: StateFlow<Pair<Int, Boolean>> = _latestBattery
 
+    private val _latestBleSteps = MutableStateFlow(0L)
+    val latestBleSteps: StateFlow<Long> = _latestBleSteps
+
     private val _newRingAccelerometerReading = MutableSharedFlow<RingAccelerometerData>(replay = 1)
     val newRingAccelerometerReading: SharedFlow<RingAccelerometerData> = _newRingAccelerometerReading
 
@@ -70,6 +73,10 @@ class BleSensorDataRepository @Inject constructor() {
         val currentBuffer = _bufferedHeartRateData.value
         _bufferedHeartRateData.value = mutableListOf()
         return currentBuffer
+    }
+
+    fun updateSteps(steps: Long) {
+        _latestBleSteps.value = steps
     }
 
     fun updateSpo2(spo2Object: OxigenacaoSanguinea) {

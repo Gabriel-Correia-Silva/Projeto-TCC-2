@@ -16,6 +16,8 @@ private const val KEY_STRESS_ENABLED = "stress_enabled"
 private const val KEY_STEPS_GENERAL_ENABLED = "steps_general_enabled"
 private const val KEY_HEART_RATE_INTERVAL = "heart_rate_interval"
 private const val KEY_SPO2_INTERVAL = "spo2_interval"
+private const val KEY_OVERRIDE_HEALTH_CONNECT = "override_health_connect"
+private const val KEY_MONITORING_PAUSED_UNTIL = "monitoring_paused_until"
 
 @Singleton
 class BleSensorPreferencesRepository @Inject constructor(
@@ -38,11 +40,17 @@ class BleSensorPreferencesRepository @Inject constructor(
     private val _stepsGeneralEnabled = MutableStateFlow(prefs.getBoolean(KEY_STEPS_GENERAL_ENABLED, false))
     val stepsGeneralEnabled: StateFlow<Boolean> = _stepsGeneralEnabled
 
-    private val _heartRateInterval = MutableStateFlow(prefs.getInt(KEY_HEART_RATE_INTERVAL, 10)) // Default 10 seconds
+    private val _heartRateInterval = MutableStateFlow(prefs.getInt(KEY_HEART_RATE_INTERVAL, 10))
     val heartRateInterval: StateFlow<Int> = _heartRateInterval
 
-    private val _spo2Interval = MutableStateFlow(prefs.getInt(KEY_SPO2_INTERVAL, 600)) // Default 600 seconds (10 minutes)
+    private val _spo2Interval = MutableStateFlow(prefs.getInt(KEY_SPO2_INTERVAL, 600))
     val spo2Interval: StateFlow<Int> = _spo2Interval
+
+    private val _overrideHealthConnect = MutableStateFlow(prefs.getBoolean(KEY_OVERRIDE_HEALTH_CONNECT, false))
+    val overrideHealthConnect: StateFlow<Boolean> = _overrideHealthConnect
+
+    private val _monitoringPausedUntil = MutableStateFlow(prefs.getLong(KEY_MONITORING_PAUSED_UNTIL, 0L))
+    val monitoringPausedUntil: StateFlow<Long> = _monitoringPausedUntil
 
     fun setAccelerometerEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_ACCELEROMETER_ENABLED, enabled).apply()
@@ -69,6 +77,11 @@ class BleSensorPreferencesRepository @Inject constructor(
         _stepsGeneralEnabled.value = enabled
     }
 
+    fun setOverrideHealthConnect(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_OVERRIDE_HEALTH_CONNECT, enabled).apply()
+        _overrideHealthConnect.value = enabled
+    }
+
     fun setHeartRateInterval(intervalInSeconds: Int) {
         prefs.edit().putInt(KEY_HEART_RATE_INTERVAL, intervalInSeconds).apply()
         _heartRateInterval.value = intervalInSeconds
@@ -81,5 +94,9 @@ class BleSensorPreferencesRepository @Inject constructor(
 
     fun isAnyRawDataEnabled(): Boolean {
         return accelerometerEnabled.value
+    }
+    fun setMonitoringPausedUntil(timestamp: Long) {
+        prefs.edit().putLong(KEY_MONITORING_PAUSED_UNTIL, timestamp).apply()
+        _monitoringPausedUntil.value = timestamp
     }
 }

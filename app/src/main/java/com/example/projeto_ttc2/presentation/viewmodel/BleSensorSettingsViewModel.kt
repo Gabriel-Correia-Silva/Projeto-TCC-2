@@ -35,6 +35,9 @@ class BleSensorSettingsViewModel @Inject constructor(
     val stepsGeneralEnabled: StateFlow<Boolean> = bleSensorPreferencesRepository.stepsGeneralEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val overrideHealthConnect: StateFlow<Boolean> = bleSensorPreferencesRepository.overrideHealthConnect
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val heartRateInterval: StateFlow<Int> = bleSensorPreferencesRepository.heartRateInterval
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
 
@@ -59,6 +62,10 @@ class BleSensorSettingsViewModel @Inject constructor(
 
     fun setStepsGeneralEnabled(enabled: Boolean) {
         bleSensorPreferencesRepository.setStepsGeneralEnabled(enabled)
+    }
+
+    fun setOverrideHealthConnect(enabled: Boolean) {
+        bleSensorPreferencesRepository.setOverrideHealthConnect(enabled)
     }
 
     fun setHeartRateInterval(intervalInSeconds: Int) {

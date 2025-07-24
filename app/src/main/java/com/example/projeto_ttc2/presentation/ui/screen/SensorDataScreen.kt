@@ -51,12 +51,6 @@ fun SensorDataScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Dados dos Sensores do Anel",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
         SensorDisplayCardRing(
             sensorName = "Acelerômetro",
             data = latestBleAccelerometerData,

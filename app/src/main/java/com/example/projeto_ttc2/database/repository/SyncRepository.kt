@@ -16,7 +16,7 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Date // Import Date
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,7 +31,8 @@ class SyncRepository @Inject constructor(
     private val sensorRepository: SensorRepository,
     private val apiService: ApiService,
     private val firebaseAuth: FirebaseAuth,
-    private val bleSensorDataRepository: BleSensorDataRepository
+    private val bleSensorDataRepository: BleSensorDataRepository,
+    private val bleSensorPreferencesRepository: BleSensorPreferencesRepository
 ) {
     private val TAG = "SyncRepository"
 
@@ -47,14 +48,22 @@ class SyncRepository @Inject constructor(
             val batch = firestore.batch()
             val phoneSensorReadings: Pair<List<AccelerometerData>, List<GyroscopeData>>
 
-            coroutineScope {
-                val heartRateJob = async { heartRateRepository.syncData(batch) }
-                val stepsJob = async { stepsRepository.syncData(batch) }
-                val sleepJob = async { sleepRepository.syncData(batch) }
-                val caloriesJob = async { caloriesRepository.syncData(batch) }
-                val oxygenJob = async { oxygenSaturationRepository.syncData(batch) }
+            if (!bleSensorPreferencesRepository.overrideHealthConnect.value) {
+                coroutineScope {
+                    val heartRateJob = async { heartRateRepository.syncData(batch) }
+                    val stepsJob = async { stepsRepository.syncData(batch) }
+                    val sleepJob = async { sleepRepository.syncData(batch) }
+                    val caloriesJob = async { caloriesRepository.syncData(batch) }
+                    val oxygenJob = async { oxygenSaturationRepository.syncData(batch) }
+                    awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob, oxygenJob)
+                }
+                Log.d(TAG, "Sincronização local (Health Connect) concluída.")
+            } else {
+                Log.d(TAG, "Sincronização com Health Connect ignorada (sobreposição ativa).")
+            }
 
-                val sensorJob = async {
+            val sensorJob = coroutineScope {
+                async {
                     withTimeoutOrNull(6000L) {
                         sensorRepository.captureSensorData(5000L).firstOrNull()
                     } ?: run {
@@ -62,11 +71,8 @@ class SyncRepository @Inject constructor(
                         Pair(emptyList(), emptyList())
                     }
                 }
-
-                awaitAll(heartRateJob, stepsJob, sleepJob, caloriesJob, oxygenJob)
-                phoneSensorReadings = sensorJob.await()
             }
-            Log.d(TAG, "Sincronização local (Health Connect) e captura de sensores do telefone concluídas.")
+            phoneSensorReadings = sensorJob.await()
 
             try {
                 Log.d(TAG, "A montar o payload para a API Web (incluindo dados do anel)...")
@@ -105,22 +111,11 @@ class SyncRepository @Inject constructor(
                     OxigenacaoSanguinea(spo2 = it, userId = userId)
                 } ?: emptyList()
 
-
                 val bleRingAccelerometerData = bleSensorDataRepository.getAndClearBufferedRingAccelerometerData()
-                Log.d(TAG, "Dados de acelerômetro do anel a enviar (${bleRingAccelerometerData.size} leituras).")
-
                 val bleHeartRateData = bleSensorDataRepository.getAndClearBufferedHeartRateData()
-                Log.d(TAG, "Dados de FC do anel a enviar (${bleHeartRateData.size} leituras).")
-
                 val bleSpo2Data = bleSensorDataRepository.getAndClearBufferedSpo2Data()
-                Log.d(TAG, "Dados de SpO2 do anel a enviar (${bleSpo2Data.size} leituras).")
-
                 val bleRawSpO2Data = bleSensorDataRepository.getAndClearBufferedRawSpO2Data()
-                Log.d(TAG, "Dados brutos de SpO2 do anel a enviar (${bleRawSpO2Data.size} leituras).")
-
                 val bleRawPpgData = bleSensorDataRepository.getAndClearBufferedRawPpgData()
-                Log.d(TAG, "Dados brutos de PPG do anel a enviar (${bleRawPpgData.size} leituras).")
-
 
                 val detailedPayload = DetailedHealthAndSensorPayload(
                     userId = userId,

@@ -13,8 +13,8 @@ import com.example.projeto_ttc2.presentation.viewmodel.DashboardViewModel
 import kotlinx.coroutines.launch
 
 
-private const val MIN_HEART_RATE = 100L
-private const val MAX_HEART_RATE = 200L
+private const val MIN_HEART_RATE = 1000L
+private const val MAX_HEART_RATE = 2000L
 private const val MIN_STEP_GOAL = 1000L
 private const val MAX_STEP_GOAL = 50000L
 

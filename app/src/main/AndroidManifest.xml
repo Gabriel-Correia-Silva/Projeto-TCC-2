@@ -12,7 +12,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/> <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -103,6 +104,11 @@
             android:name=".background.BleMonitoringService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" /></application>
+            android:foregroundServiceType="connectedDevice" />
+    <receiver
+        android:name=".background.MonitoringRestartReceiver"
+        android:enabled="true"
+        android:exported="false" />
+        </application>
 
 </manifest>

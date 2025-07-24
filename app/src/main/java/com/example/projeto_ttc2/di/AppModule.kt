@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Room
 import com.example.projeto_ttc2.database.AppDatabase
 import com.example.projeto_ttc2.database.dao.*
-import com.example.projeto_ttc2.database.entities.*
 import com.example.projeto_ttc2.database.repository.AuthRepository
 import com.example.projeto_ttc2.database.repository.BleSensorDataRepository
 import com.example.projeto_ttc2.database.repository.BleSensorPreferencesRepository
@@ -119,11 +118,6 @@ object AppModule {
         return BleSensorPreferencesRepository(context)
     }
 
-    @Provides
-    @Singleton
-    fun provideBleSensorDataRepository(): BleSensorDataRepository {
-        return BleSensorDataRepository()
-    }
     @Provides
     @Singleton
     fun provideAuthRepository(auth: FirebaseAuth, firestore: FirebaseFirestore): AuthRepository = AuthRepository(auth, firestore)

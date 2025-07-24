@@ -38,6 +38,14 @@
           }
         },
         {
+          "client_id": "145898374755-rcrl9dto24p8aj8gmnsumele76ooq5al.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.projeto_ttc2",
+            "certificate_hash": "f5373b99b68823a55ed19a613d4835aa3129cd34"
+          }
+        },
+        {
           "client_id": "145898374755-i9r6a2mqmc5bv47014eut7n5j8gqrfkl.apps.googleusercontent.com",
           "client_type": 3
         }

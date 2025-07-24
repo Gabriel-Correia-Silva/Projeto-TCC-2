@@ -14,13 +14,13 @@ private const val KEY_HEART_RATE_ENABLED = "heart_rate_enabled"
 private const val KEY_SPO2_ENABLED = "spo2_enabled"
 private const val KEY_STRESS_ENABLED = "stress_enabled"
 private const val KEY_STEPS_GENERAL_ENABLED = "steps_general_enabled"
+private const val KEY_HEART_RATE_INTERVAL = "heart_rate_interval"
+private const val KEY_SPO2_INTERVAL = "spo2_interval"
 
 @Singleton
 class BleSensorPreferencesRepository @Inject constructor(
     @ApplicationContext context: Context
 ) {
-
-
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _accelerometerEnabled = MutableStateFlow(prefs.getBoolean(KEY_ACCELEROMETER_ENABLED, false))
@@ -37,6 +37,12 @@ class BleSensorPreferencesRepository @Inject constructor(
 
     private val _stepsGeneralEnabled = MutableStateFlow(prefs.getBoolean(KEY_STEPS_GENERAL_ENABLED, false))
     val stepsGeneralEnabled: StateFlow<Boolean> = _stepsGeneralEnabled
+
+    private val _heartRateInterval = MutableStateFlow(prefs.getInt(KEY_HEART_RATE_INTERVAL, 10)) // Default 10 seconds
+    val heartRateInterval: StateFlow<Int> = _heartRateInterval
+
+    private val _spo2Interval = MutableStateFlow(prefs.getInt(KEY_SPO2_INTERVAL, 600)) // Default 600 seconds (10 minutes)
+    val spo2Interval: StateFlow<Int> = _spo2Interval
 
     fun setAccelerometerEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_ACCELEROMETER_ENABLED, enabled).apply()
@@ -63,9 +69,17 @@ class BleSensorPreferencesRepository @Inject constructor(
         _stepsGeneralEnabled.value = enabled
     }
 
+    fun setHeartRateInterval(intervalInSeconds: Int) {
+        prefs.edit().putInt(KEY_HEART_RATE_INTERVAL, intervalInSeconds).apply()
+        _heartRateInterval.value = intervalInSeconds
+    }
+
+    fun setSpo2Interval(intervalInSeconds: Int) {
+        prefs.edit().putInt(KEY_SPO2_INTERVAL, intervalInSeconds).apply()
+        _spo2Interval.value = intervalInSeconds
+    }
 
     fun isAnyRawDataEnabled(): Boolean {
-        return accelerometerEnabled.value ||
-                false
+        return accelerometerEnabled.value
     }
 }

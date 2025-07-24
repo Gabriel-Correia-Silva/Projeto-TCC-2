@@ -149,6 +149,8 @@ class BleMonitoringService : Service() {
             launch { startAccelerometerCollector(connector) }
             launch { startSpo2Collector(connector) }
             launch { startStepsCollector(connector) }
+            launch { startStressCollector(connector) }
+            launch { startBatteryCollector(connector) }
             launch { startFallDetectionCollector() }
         }
 
@@ -156,35 +158,58 @@ class BleMonitoringService : Service() {
             connector.connectionStatus.filter { it }.first()
             Log.d(TAG, "Conexão pronta. A iniciar ciclo de comandos.")
 
-            // Ativa ou desativa o fluxo do acelerómetro (apenas uma vez)
             if (bleSensorPreferencesRepository.accelerometerEnabled.value) {
-                Log.d(TAG, "A tentar ativar o fluxo do acelerómetro...")
                 connector.sendCommand(Command.ENABLE_ALL_RAW_DATA)
             } else {
-                Log.d(TAG, "A tentar desativar o fluxo do acelerómetro...")
                 connector.sendCommand(Command.DISABLE_ALL_RAW_DATA)
             }
             delay(200)
 
-            // Ciclo para pedir dados periodicamente
+            var lastHrRequestTime = 0L
+            var lastSpo2RequestTime = 0L
+            var lastGeneralRequestTime = 0L
+
             while (isActive) {
-                if (bleSensorPreferencesRepository.heartRateEnabled.value) {
-                    Log.d(TAG, "A pedir leitura de frequência cardíaca...")
+                val currentTime = System.currentTimeMillis()
+
+                val hrInterval = bleSensorPreferencesRepository.heartRateInterval.value * 1000L
+                val spo2Interval = bleSensorPreferencesRepository.spo2Interval.value * 1000L
+
+                if (bleSensorPreferencesRepository.heartRateEnabled.value && (currentTime - lastHrRequestTime) >= hrInterval) {
                     connector.sendCommand(Command.REQUEST_HEART_RATE)
+                    lastHrRequestTime = currentTime
                     delay(200)
-                }
-                if (bleSensorPreferencesRepository.spo2Enabled.value) {
-                    Log.d(TAG, "A pedir leitura de SpO2...")
-                    connector.sendCommand(Command.REQUEST_SPO2)
-                    delay(200)
-                }
-                if (bleSensorPreferencesRepository.stepsGeneralEnabled.value) {
-                    Log.d(TAG, "A pedir dados de passos...")
-                    connector.sendCommand(Command.SYNC_HISTORICAL_STEPS)
                 }
 
-                delay(15000)
+                if (bleSensorPreferencesRepository.spo2Enabled.value && (currentTime - lastSpo2RequestTime) >= spo2Interval) {
+                    connector.sendCommand(Command.REQUEST_SPO2)
+                    lastSpo2RequestTime = currentTime
+                    delay(200)
+                }
+
+                if ((currentTime - lastGeneralRequestTime) >= 30000) { // General data every 30 seconds
+                    if (bleSensorPreferencesRepository.stepsGeneralEnabled.value) {
+                        connector.sendCommand(Command.SYNC_HISTORICAL_STEPS)
+                        delay(200)
+                    }
+                    connector.sendCommand(Command.GET_BATTERY_STATE)
+                    lastGeneralRequestTime = currentTime
+                }
+
+                delay(1000)
             }
+        }
+    }
+
+    private fun CoroutineScope.startStressCollector(connector: ColmiRingConnector) = launch {
+        connector.stressData.collect { stress ->
+            bleSensorDataRepository.updateStress(stress)
+        }
+    }
+
+    private fun CoroutineScope.startBatteryCollector(connector: ColmiRingConnector) = launch {
+        connector.batteryData.collect { (level, isCharging) ->
+            bleSensorDataRepository.updateBattery(level, isCharging)
         }
     }
 

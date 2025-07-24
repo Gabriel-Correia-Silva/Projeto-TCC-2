@@ -1,6 +1,5 @@
 package com.example.projeto_ttc2.database.repository
 
-import com.example.projeto_ttc2.database.entities.AccelerometerData
 import com.example.projeto_ttc2.database.entities.BatimentoCardiaco
 import com.example.projeto_ttc2.database.entities.OxigenacaoSanguinea
 import com.example.projeto_ttc2.database.entities.RingAccelerometerData
@@ -22,6 +21,12 @@ class BleSensorDataRepository @Inject constructor() {
 
     private val _latestSpo2 = MutableStateFlow(0.0)
     val latestSpo2: StateFlow<Double> = _latestSpo2
+
+    private val _latestStress = MutableStateFlow(0)
+    val latestStress: StateFlow<Int> = _latestStress
+
+    private val _latestBattery = MutableStateFlow(Pair(0, false))
+    val latestBattery: StateFlow<Pair<Int, Boolean>> = _latestBattery
 
     private val _newRingAccelerometerReading = MutableSharedFlow<RingAccelerometerData>(replay = 1)
     val newRingAccelerometerReading: SharedFlow<RingAccelerometerData> = _newRingAccelerometerReading
@@ -72,6 +77,14 @@ class BleSensorDataRepository @Inject constructor() {
         _bufferedSpo2Data.value.add(spo2Object)
     }
 
+    fun updateStress(stress: Int) {
+        _latestStress.value = stress
+    }
+
+    fun updateBattery(level: Int, isCharging: Boolean) {
+        _latestBattery.value = Pair(level, isCharging)
+    }
+
     fun getAndClearBufferedSpo2Data(): List<OxigenacaoSanguinea> {
         val currentBuffer = _bufferedSpo2Data.value
         _bufferedSpo2Data.value = mutableListOf()
@@ -79,7 +92,7 @@ class BleSensorDataRepository @Inject constructor() {
     }
 
     fun updateRawSpO2Data(raw: Int, a: Int, b: Int, c: Int) {
-        val newReading = BleRawSpO2Data(timestamp = System.currentTimeMillis(), raw = raw, a = a, b = b, c = c)
+        val newReading = BleRawSpO2Data(System.currentTimeMillis(), raw, a, b, c)
         _bufferedRawSpO2Data.value.add(newReading)
     }
 
@@ -90,7 +103,7 @@ class BleSensorDataRepository @Inject constructor() {
     }
 
     fun updateRawPpgData(raw: Int, max: Int, min: Int, diff: Int) {
-        val newReading = BleRawPpgData(timestamp = System.currentTimeMillis(), raw = raw, max = max, min = min, diff = diff)
+        val newReading = BleRawPpgData(System.currentTimeMillis(), raw, max, min, diff)
         _bufferedRawPpgData.value.add(newReading)
     }
 

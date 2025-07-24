@@ -18,26 +18,20 @@ class SensorDataViewModel @Inject constructor(
     val sensorRepository: SensorRepository,
     private val bleSensorDataRepository: BleSensorDataRepository
 ) : ViewModel() {
-    val latestBleAccelerometerData: StateFlow<RingAccelerometerData> = bleSensorDataRepository.latestBleAccelerometerData
+
+    val latestBleAccelerometerData: StateFlow<RingAccelerometerData> = bleSensorDataRepository.newRingAccelerometerReading
         .onEach { data ->
-
-            Log.d("SensorDataViewModel", "latestBleAccelerometerData atualizado: X=${data.x}, Y=${data.y}, Z=${data.z}")
+            Log.d("SensorDataViewModel", "Nova Leitura (Tempo Real): X=${data.x}, Y=${data.y}, Z=${data.z}")
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RingAccelerometerData(x = 0f, y = 0f, z = 0f))
-
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = RingAccelerometerData(x = 0f, y = 0f, z = 0f)
+        )
 
     val latestBleHeartRate: StateFlow<Long> = bleSensorDataRepository.latestHeartRate
-        .onEach { bpm ->
-            Log.d("SensorDataViewModel", "latestBleHeartRate atualizado: BPM=${bpm}")
-        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-
     val latestBleSpo2: StateFlow<Double> = bleSensorDataRepository.latestSpo2
-        .onEach { spo2 ->
-            Log.d("SensorDataViewModel", "latestBleSpo2 atualizado: SpO2=${spo2}")
-        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
-
-
 }

@@ -48,7 +48,6 @@ import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.absoluteValue
 
 @Composable
 fun SensorDataScreen(
@@ -66,12 +65,9 @@ fun SensorDataScreen(
     var recordedGyroscopeData by remember { mutableStateOf<List<GyroscopeData>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
 
-
     val latestBleAccelerometerData by viewModel.latestBleAccelerometerData.collectAsStateWithLifecycle()
     val latestBleHeartRate by viewModel.latestBleHeartRate.collectAsStateWithLifecycle()
     val latestBleSpo2 by viewModel.latestBleSpo2.collectAsStateWithLifecycle()
-
-
 
     DisposableEffect(Unit) {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -109,7 +105,6 @@ fun SensorDataScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-
         BackgroundMonitoringControl(
             isMonitoring = isMonitoringInBackground,
             onToggle = {
@@ -122,7 +117,6 @@ fun SensorDataScreen(
             }
         )
 
-
         Text(
             text = "Sensores do Smartphone",
             style = MaterialTheme.typography.titleMedium,
@@ -131,8 +125,6 @@ fun SensorDataScreen(
         )
         SensorDisplayCard("Acelerômetro (Telefone)", phoneAccelerometerData)
         SensorDisplayCard("Giroscópio (Telefone)", phoneGyroscopeData)
-
-
 
         Text(
             text = "Sensores do Anel Colmi R06 (via BLE)",
@@ -244,7 +236,6 @@ private fun SensorDisplayCard(sensorName: String, data: Triple<Float, Float, Flo
         }
     }
 }
-
 
 @Composable
 private fun SensorDisplayCardRing(
@@ -358,7 +349,6 @@ private fun saveSensorDataToCsv(
         FileOutputStream(file).use { fos ->
             OutputStreamWriter(fos).use { writer ->
                 writer.append("timestamp,x,y,z\n")
-
                 data.forEach { item ->
                     when (item) {
                         is AccelerometerData -> {
@@ -367,18 +357,14 @@ private fun saveSensorDataToCsv(
                         is GyroscopeData -> {
                             writer.append("${item.timestamp},${item.x},${item.y},${item.z}\n")
                         }
-                        else -> {
-                        }
                     }
                 }
                 writer.flush()
                 Toast.makeText(context, "Dados salvos em: ${file.absolutePath}", Toast.LENGTH_LONG).show()
-                println("Data saved to: ${file.absolutePath}")
             }
         }
     } catch (e: Exception) {
         Toast.makeText(context, "Erro ao salvar dados CSV: ${e.message}", Toast.LENGTH_LONG).show()
-        println("Error saving data to CSV: ${e.message}")
         e.printStackTrace()
     }
 }

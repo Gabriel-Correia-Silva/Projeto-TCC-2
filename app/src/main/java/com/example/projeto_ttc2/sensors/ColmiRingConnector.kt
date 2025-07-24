@@ -2,7 +2,6 @@ package com.example.projeto_ttc2.sensors
 
 import android.Manifest
 import android.bluetooth.*
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -16,9 +15,111 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.sqrt
 
-
 data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
+enum class Uuid(val str128: String) {
+    CMD_SERVICE("6e40fff0-b5a3-f393-e0a9-e50e24dcca9e"),
+    CMD_WRITE_CHAR("6e400002-b5a3-f393-e0a9-e50e24dcca9e"),
+    CMD_NOTIFY_CHAR("6e400003-b5a3-f393-e0a9-e50e24dcca9e"),
+    FW_SERVICE("de5bf728-d711-4e47-af26-65e3012a5dc7"),
+    FW_WRITE_CHAR("de5bf72a-d711-4e47-af26-65e3012a5dc7"),
+    FW_NOTIFY_CHAR("de5bf729-d711-4e47-af26-65e3012a5dc7");
+
+    fun toUUID(): UUID = UUID.fromString(str128)
+}
+
+enum class Command(val hex: String) {
+    SET_DATE_TIME("01"),
+    ENABLE_WAVE_GESTURE("0204"),
+    WAITING_FOR_WAVE_GESTURE("0205"),
+    DISABLE_WAVE_GESTURE("0206"),
+    GET_BATTERY_STATE("03"),
+    SET_PHONE_NAME("04"),
+    KEEP_ALIVE("39"),
+    REBOOT("08"),
+    SET_UNITS_METRIC("0a0200"),
+    SET_UNITS_IMPERIAL("0a0201"),
+    BLINK_TWICE("10"),
+    SYNC_HISTORICAL_HEART_RATE("15"),
+    SET_HEART_RATE_MONITORING_INTERVAL("160201"),
+    DISABLE_SPO2_MONITORING("2c0200"),
+    ENABLE_SPO2_MONITORING("2c0201"),
+    DISABLE_STRESS_MONITORING("360200"),
+    ENABLE_STRESS_MONITORING("360201"),
+    SYNC_HISTORICAL_STRESS("37"),
+    SYNC_HISTORICAL_STEPS("43"),
+    GREEN_LIGHT_10_SEC("5055aa"),
+    REQUEST_HEART_RATE("6901"),
+    REQUEST_SPO2("6903"),
+    REQUEST_STRESS("6908"),
+    DISABLE_ALL_RAW_DATA("a102"),
+    GET_ALL_RAW_DATA("a103"),
+    ENABLE_ALL_RAW_DATA("a104"),
+    SYNC_HISTORICAL_SLEEP("bc27"),
+    SYNC_HISTORICAL_SPO2("bc2a"),
+    RESET_DEFAULTS("ff");
+
+    val bytes: ByteArray by lazy { hexStringToCmdBytes(hex) }
+}
+
+enum class Notification(val code: Int) {
+    DATETIME(0x01),
+    WAVE_GESTURE(0x02),
+    BATTERY(0x03),
+    PHONE_NAME(0x04),
+    UNITS_PREFERENCE(0x0a),
+    BLINK_TWICE(0x10),
+    HEART_RATE_MONITORING_INTERVAL(0x16),
+    SPO2_MONITORING_PREFERENCE(0x2c),
+    UNKNOWN(0x2f),
+    STRESS_MONITORING_PREFERENCE(0x36),
+    GREEN_LIGHT_10_SEC(0x50),
+    HEART_SPO2_STRESS(0x69),
+    GENERAL(0x73),
+    RAW_SENSOR(0xa1);
+
+    companion object {
+        fun fromCode(code: Int) = values().find { it.code == code }
+    }
+}
+
+enum class GeneralSubtype(val code: Int) {
+    HEART_RATE_SYNC_REQUIRED(0x01),
+    SINGLE_BP_SYNC(0x02),
+    SPO2_SYNC_REQUIRED(0x03),
+    SINGLE_STEP_DETAIL_SYNC(0x04),
+    TEMPERATURE(0x05),
+    SYNC_TODAY_SPORT(0x06),
+    SPORT_ENDED(0x07),
+    TARGET_SETTING_RESPONSE(0x10),
+    BATTERY(0x0c),
+    BLOOD_SUGAR(0x0d),
+    STEPS_CALORIES_DISTANCE(0x12);
+
+    companion object {
+        fun fromCode(code: Int) = values().find { it.code == code }
+    }
+}
+
+enum class RawSensorSubtype(val code: Int) {
+    SPO2(0x01),
+    PPG(0x02),
+    ACCELEROMETER(0x03);
+
+    companion object {
+        fun fromCode(code: Int) = values().find { it.code == code }
+    }
+}
+
+enum class HeartSpO2StressSubtype(val code: Int) {
+    HEART_RATE(0x01),
+    SPO2(0x03),
+    STRESS(0x08);
+
+    companion object {
+        fun fromCode(code: Int) = values().find { it.code == code }
+    }
+}
 
 fun Int.toSigned(numBits: Int): Int {
     val maxVal = 1 shl (numBits - 1)
@@ -27,18 +128,15 @@ fun Int.toSigned(numBits: Int): Int {
     return if (value >= maxVal) value - (1 shl numBits) else value
 }
 
-
 fun hexStringToCmdBytes(hexString: String): ByteArray {
     require(hexString.length <= 30 && hexString.length % 2 == 0) { "hex string must be an even number of hex digits [0-f] less than or equal to 30 chars" }
     val bytes = ByteArray(16) { 0 }
     for (i in 0 until hexString.length / 2) {
         bytes[i] = hexString.substring(2 * i, 2 * i + 2).toInt(16).toByte()
     }
-
     bytes[15] = bytes.foldIndexed(0) { index, previous, current -> if (index < 15) previous + (current.toInt() and 0xFF) else previous }.toByte()
     return bytes
 }
-
 
 class ColmiRingConnector(private val context: Context, private val device: BluetoothDevice) {
 
@@ -46,28 +144,18 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     private var cmdWriteCharacteristic: BluetoothGattCharacteristic? = null
     private var cmdNotifyCharacteristic: BluetoothGattCharacteristic? = null
 
-
-
-
-    private val CMD_SERVICE_UUID = UUID.fromString("6e40fff0-b5a3-f393-e0a9-e50e24dcca9e")
-    private val CMD_WRITE_CHAR_UUID = UUID.fromString("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
-    private val CMD_NOTIFY_CHAR_UUID = UUID.fromString("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
     private val CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
-
 
     var isConnected: Boolean = false
         private set
     var isReady: Boolean = false
         private set
 
-
     private val _connectionStatus = MutableSharedFlow<Boolean>(replay = 1)
     val connectionStatus: SharedFlow<Boolean> = _connectionStatus
 
-
     private var connectionTimeoutJob: Job? = null
     private val connectorScope = CoroutineScope(Dispatchers.IO)
-
 
     private val _batteryData = MutableSharedFlow<Pair<Int, Boolean>>(replay = 1)
     val batteryData: SharedFlow<Pair<Int, Boolean>> = _batteryData
@@ -87,27 +175,25 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     private val _accelerometerData = MutableSharedFlow<Triple<Float, Float, Float>>(replay = 2)
     val accelerometerData: SharedFlow<Triple<Float, Float, Float>> = _accelerometerData
 
-
     private val _rawSpO2Data = MutableSharedFlow<Quadruple<Int, Int, Int, Int>>(replay = 2)
     val rawSpO2Data: SharedFlow<Quadruple<Int, Int, Int, Int>> = _rawSpO2Data
 
     private val _rawPpgData = MutableSharedFlow<Quadruple<Int, Int, Int, Int>>(replay = 2)
     val rawPpgData: SharedFlow<Quadruple<Int, Int, Int, Int>> = _rawPpgData
 
-
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
-
+            val deviceAddress = gatt?.device?.address
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        Log.d("ColmiRing", "Dispositivo conectado com sucesso. Descobrindo serviços...")
+                        Log.d("ColmiRingConnector", "SUCCESS: Conectado ao dispositivo $deviceAddress")
                         isConnected = true
                         bluetoothGatt = gatt
                         gatt?.discoverServices()
                     } else {
-                        Log.e("ColmiRing", "Conexão falhada. Status: $status")
+                        Log.e("ColmiRingConnector", "ERROR: Falha na conexão com $deviceAddress. Status: $status")
                         isConnected = false
                         isReady = false
                         _connectionStatus.tryEmit(false)
@@ -115,15 +201,12 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
                     }
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    Log.d("ColmiRing", "Dispositivo desconectado. Status: $status")
+                    Log.d("ColmiRingConnector", "INFO: Desconectado do dispositivo $deviceAddress. Status: $status")
                     isConnected = false
                     isReady = false
                     connectionTimeoutJob?.cancel()
                     _connectionStatus.tryEmit(false)
                     cleanup()
-                }
-                else -> {
-                    Log.d("ColmiRing", "Estado da conexão: $newState, Status GATT: $status")
                 }
             }
         }
@@ -131,49 +214,32 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             super.onServicesDiscovered(gatt, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("ColmiRing", "Serviços descobertos com sucesso. Total de serviços: ${gatt?.services?.size}.")
-                val service = gatt?.getService(CMD_SERVICE_UUID)
+                Log.d("ColmiRingConnector", "SUCCESS: Serviços descobertos para ${gatt?.device?.address}")
+                val service = gatt?.getService(Uuid.CMD_SERVICE.toUUID())
                 service?.let {
-                    Log.d("ColmiRing", "Serviço de comando (CMD_SERVICE_UUID) encontrado. UUID: ${it.uuid}")
-                    cmdWriteCharacteristic = it.getCharacteristic(CMD_WRITE_CHAR_UUID)
-                    cmdNotifyCharacteristic = it.getCharacteristic(CMD_NOTIFY_CHAR_UUID)
-
-                    if (cmdWriteCharacteristic == null) {
-                        Log.e("ColmiRing", "Característica de escrita (CMD_WRITE_CHAR_UUID) NÃO encontrada. UUID: $CMD_WRITE_CHAR_UUID")
-                    } else {
-                        Log.d("ColmiRing", "Característica de escrita (CMD_WRITE_CHAR_UUID) encontrada. UUID: ${cmdWriteCharacteristic?.uuid}")
-                    }
-
+                    cmdWriteCharacteristic = it.getCharacteristic(Uuid.CMD_WRITE_CHAR.toUUID())
+                    cmdNotifyCharacteristic = it.getCharacteristic(Uuid.CMD_NOTIFY_CHAR.toUUID())
                     cmdNotifyCharacteristic?.let { notifyChar ->
-                        Log.d("ColmiRing", "Característica de notificação (CMD_NOTIFY_CHAR_UUID) encontrada. UUID: ${notifyChar.uuid}. Tentando configurar notificações...")
-
-                        val setNotificationSuccess = gatt.setCharacteristicNotification(notifyChar, true)
-                        Log.d("ColmiRing", "setCharacteristicNotification retornado: $setNotificationSuccess")
-
+                        gatt.setCharacteristicNotification(notifyChar, true)
                         val descriptor = notifyChar.getDescriptor(CCCD_UUID)
-                        if (descriptor == null) {
-                            Log.e("ColmiRing", "Descritor CCCD para notificação NÃO encontrado. UUID: $CCCD_UUID")
-                        } else {
-                            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                            val writeDescriptorSuccess = gatt.writeDescriptor(descriptor)
-                            Log.d("ColmiRing", "Escrita do descritor de notificação iniciada. writeDescriptor retornado: $writeDescriptorSuccess. Descritor UUID: ${descriptor.uuid}")
-                        }
+                        descriptor?.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                        gatt.writeDescriptor(descriptor)
                     } ?: run {
-                        Log.e("ColmiRing", "Característica de notificação (CMD_NOTIFY_CHAR_UUID) NÃO encontrada. UUID: $CMD_NOTIFY_CHAR_UUID")
+                        Log.e("ColmiRingConnector", "ERROR: Característica de notificação não encontrada.")
                         isConnected = false
                         isReady = false
                         _connectionStatus.tryEmit(false)
                         cleanup()
                     }
                 } ?: run {
-                    Log.e("ColmiRing", "Serviço de comando (CMD_SERVICE_UUID) NÃO encontrado. UUID: $CMD_SERVICE_UUID")
+                    Log.e("ColmiRingConnector", "ERROR: Serviço de comando não encontrado.")
                     isConnected = false
                     isReady = false
                     _connectionStatus.tryEmit(false)
                     cleanup()
                 }
             } else {
-                Log.w("ColmiRing", "Falha na descoberta de serviços: $status")
+                Log.e("ColmiRingConnector", "ERROR: Falha na descoberta de serviços. Status: $status")
                 isConnected = false
                 isReady = false
                 _connectionStatus.tryEmit(false)
@@ -183,22 +249,20 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
 
         override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?, status: Int) {
             super.onCharacteristicWrite(gatt, characteristic, status)
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("ColmiRing", "Escrita na característica bem-sucedida para UUID: ${characteristic?.uuid}. Valor: ${characteristic?.value?.joinToString { String.format("%02X", it) }}")
-            } else {
-                Log.e("ColmiRing", "Falha na escrita da característica ${characteristic?.uuid}: $status. Valor: ${characteristic?.value?.joinToString { String.format("%02X", it) }}")
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e("ColmiRing-WRITE", "ERROR: Falha na escrita da característica ${characteristic?.uuid}: $status")
             }
         }
 
         override fun onDescriptorWrite(gatt: BluetoothGatt?, descriptor: BluetoothGattDescriptor?, status: Int) {
             super.onDescriptorWrite(gatt, descriptor, status)
             if (status == BluetoothGatt.GATT_SUCCESS && descriptor?.uuid == CCCD_UUID) {
-                Log.d("ColmiRing", "Descritor ${descriptor?.uuid} escrito com sucesso. Status: $status. Notificações configuradas. Pronto para enviar comandos.")
+                Log.d("ColmiRingConnector", "SUCCESS: Descritor escrito. O dispositivo está pronto.")
                 connectionTimeoutJob?.cancel()
                 isReady = true
                 _connectionStatus.tryEmit(true)
             } else {
-                Log.e("ColmiRing", "Falha ao escrever descritor ${descriptor?.uuid}: $status")
+                Log.e("ColmiRingConnector", "ERROR: Falha ao escrever descritor. Status: $status")
                 isReady = false
                 _connectionStatus.tryEmit(false)
                 cleanup()
@@ -208,10 +272,8 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         override fun onCharacteristicChanged(gatt: BluetoothGatt?, characteristic: BluetoothGattCharacteristic?) {
             super.onCharacteristicChanged(gatt, characteristic)
             characteristic?.let {
-                if (it.uuid == CMD_NOTIFY_CHAR_UUID) {
-                    val data = it.value
-                    Log.d("ColmiRing-RAW-NOTIF", "Notificação recebida (RAW HEX): ${data.joinToString { String.format("%02X", it) }}")
-                    handleNotificationData(data)
+                if (it.uuid == Uuid.CMD_NOTIFY_CHAR.toUUID()) {
+                    handleNotificationData(it.value)
                 }
             }
         }
@@ -220,17 +282,15 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun connect() {
         if (isConnected) {
-            Log.w("ColmiRing", "Já conectado, ignorando nova tentativa de conexão.")
+            Log.w("ColmiRingConnector", "WARN: Já conectado, a ignorar nova tentativa de conexão.")
             return
         }
-
-        Log.d("ColmiRing", "Iniciando conexão com ${device.name} (${device.address})")
+        Log.d("ColmiRingConnector", "INFO: A iniciar conexão com ${device.name} (${device.address})")
         bluetoothGatt = device.connectGatt(context, false, gattCallback)
-
         connectionTimeoutJob = connectorScope.launch {
             delay(10000)
             if (!isReady) {
-                Log.e("ColmiRing", "Timeout na conexão: Dispositivo ${device.address} não ficou pronto a tempo.")
+                Log.e("ColmiRingConnector", "ERROR: Timeout na conexão. O dispositivo não ficou pronto a tempo.")
                 disconnect()
             }
         }
@@ -238,14 +298,14 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun disconnect() {
-        Log.d("ColmiRing", "Chamando disconnect no GATT.")
+        Log.d("ColmiRingConnector", "INFO: A chamar disconnect no GATT.")
         connectionTimeoutJob?.cancel()
         bluetoothGatt?.disconnect()
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun cleanup() {
-        Log.d("ColmiRing", "Executando cleanup: Fechando GATT e limpando recursos.")
+        Log.d("ColmiRingConnector", "INFO: A executar cleanup: fechar GATT e limpar recursos.")
         bluetoothGatt?.close()
         bluetoothGatt = null
         cmdWriteCharacteristic = null
@@ -257,122 +317,84 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun sendCommand(commandBytes: ByteArray): Boolean {
         if (!isReadyToSendCommands()) {
-            Log.e("ColmiRing", "Dispositivo não está pronto para enviar comandos. Status: conectado=$isConnected, pronto=$isReady. Comando: ${commandBytes.joinToString { String.format("%02X", it) }}")
+            Log.e("ColmiRingConnector", "ERROR: Dispositivo não está pronto para enviar comandos.")
             return false
         }
         val gatt = bluetoothGatt
         val writeChar = cmdWriteCharacteristic
         if (gatt == null || writeChar == null) {
-            Log.e("ColmiRing", "GATT ou Característica de escrita nulos inesperadamente. Comando: ${commandBytes.joinToString { String.format("%02X", it) }}")
+            Log.e("ColmiRingConnector", "ERROR: GATT ou Característica de escrita nulos.")
             return false
         }
-
         writeChar.value = commandBytes
-        val writeSuccess = gatt.writeCharacteristic(writeChar)
-        Log.d("ColmiRing", "Tentando enviar comando: ${commandBytes.joinToString { String.format("%02X", it) }}. Sucesso na escrita (método): $writeSuccess")
-        return writeSuccess
+        return gatt.writeCharacteristic(writeChar)
     }
 
     fun isReadyToSendCommands(): Boolean = isConnected && isReady
 
-    fun sendCommand(hexString: String): Boolean {
-        return try {
-            val commandBytes = hexStringToCmdBytes(hexString)
-            sendCommand(commandBytes)
-        } catch (e: Exception) {
-            Log.e("ColmiRing", "Erro ao converter comando hex '$hexString': ${e.message}", e)
-            false
-        }
+    fun sendCommand(command: Command): Boolean {
+        return sendCommand(command.bytes)
     }
 
     private fun handleNotificationData(data: ByteArray) {
-        if (data.size != 16) {
-            Log.e("ColmiRing", "Tamanho de mensagem inválido: ${data.size}")
-            return
-        }
+        if (data.size != 16) return
 
-        val firstByte = data[0].toInt() and 0xFF
-        val secondByte = data[1].toInt() and 0xFF
+        val notificationType = Notification.fromCode(data[0].toInt() and 0xFF)
+        val subType = data[1].toInt() and 0xFF
 
-        when (firstByte) {
-            0x03 -> {
+        when (notificationType) {
+            Notification.BATTERY -> {
                 val (level, isCharging) = parseBatteryData(data)
                 _batteryData.tryEmit(Pair(level, isCharging))
-                Log.d("ColmiRing", "Bateria: Nível=${level}%, Carregando=${isCharging}")
             }
-            0x73 -> {
-                Log.d("ColmiRing", "Tipo de Notificação: Geral (0x73)")
-                when (secondByte) {
-                    0x12 -> {
+            Notification.GENERAL -> {
+                when (GeneralSubtype.fromCode(subType)) {
+                    GeneralSubtype.STEPS_CALORIES_DISTANCE -> {
                         val (steps, calories, distance) = parseNotifStepsCaloriesDistanceData(data)
                         _stepsCaloriesDistanceData.tryEmit(Triple(steps, calories, distance))
-                        Log.d("ColmiRing", "Passos: ${steps}, Calorias: ${calories}kcal, Distância: ${distance}m")
                     }
-                    0x0C -> {
+                    GeneralSubtype.BATTERY -> {
                         val (level, isCharging) = parseNotifBatteryData(data)
                         _batteryData.tryEmit(Pair(level, isCharging))
-                        Log.d("ColmiRing", "Bateria (Geral): Nível=${level}%, Carregando=${isCharging}")
                     }
-                    else -> Log.d("ColmiRing", "Subtipo de Notificação Geral desconhecido: 0x${secondByte.toString(16)}")
+                    else -> {}
                 }
             }
-            0xA1 -> {
-                Log.d("ColmiRing", "Tipo de Notificação: Sensor Bruto (0xA1)")
-                when (secondByte) {
-                    0x01 -> {
+            Notification.RAW_SENSOR -> {
+                when (RawSensorSubtype.fromCode(subType)) {
+                    RawSensorSubtype.SPO2 -> {
                         val (raw, a, b, c) = parseRawSpO2SensorData(data)
                         _rawSpO2Data.tryEmit(Quadruple(raw, a, b, c))
-                        Log.d("ColmiRing", "SpO2 Bruto: RAW=${raw}, A=${a}, B=${b}, C=${c}")
                     }
-                    0x02 -> {
+                    RawSensorSubtype.PPG -> {
                         val (raw, max, min, diff) = parseRawPpgSensorData(data)
                         _rawPpgData.tryEmit(Quadruple(raw, max, min, diff))
-                        Log.d("ColmiRing", "PPG Bruto: RAW=${raw}, Max=${max}, Min=${min}, Diff=${diff}")
                     }
-                    0x03 -> {
-                        val (accelTriple, magnitude) = parseRawAccelerometerSensorData(data)
-                        val (rawX, rawY, rawZ) = accelTriple
-                        val emitted = _accelerometerData.tryEmit(Triple(rawX, rawY, rawZ))
-                        Log.d(TAG, "Magnitude do vetor: $magnitude m/s²")
-                        Log.d(TAG, "DEBUG_ACCEL_EMIT: Emitindo X=$rawX, Y=$rawY, Z=$rawZ. Sucesso: $emitted")
+                    RawSensorSubtype.ACCELEROMETER -> {
+                        val (accelTriple, _) = parseRawAccelerometerSensorData(data)
+                        _accelerometerData.tryEmit(accelTriple)
                     }
-                    else -> Log.d("ColmiRing", "Subtipo de Sensor Bruto desconhecido: 0x${secondByte.toString(16)}")
+                    else -> {}
                 }
             }
-            0x69 -> {
-                Log.d("ColmiRing", "Tipo de Notificação: Frequência/SpO2/Estresse (0x69)")
-                when (secondByte) {
-                    0x01 -> {
+            Notification.HEART_SPO2_STRESS -> {
+                when (HeartSpO2StressSubtype.fromCode(subType)) {
+                    HeartSpO2StressSubtype.HEART_RATE -> {
                         val heartRate = data[3].toInt() and 0xFF
-                        if (heartRate != 0) {
-                            _heartRateData.tryEmit(heartRate)
-                            Log.d("ColmiRing", "Frequência Cardíaca: ${heartRate}bpm")
-                        }
+                        if (heartRate > 0) _heartRateData.tryEmit(heartRate)
                     }
-                    0x03 -> {
-                        val spo2Percentage = data[3].toInt() and 0xFF
-                        if (spo2Percentage != 0) {
-                            _spO2PercentageData.tryEmit(spo2Percentage)
-                            Log.d("ColmiRing", "SpO2: ${spo2Percentage}%")
-                        }
+                    HeartSpO2StressSubtype.SPO2 -> {
+                        val spo2 = data[3].toInt() and 0xFF
+                        if (spo2 > 0) _spO2PercentageData.tryEmit(spo2)
                     }
-                    0x08 -> {
+                    HeartSpO2StressSubtype.STRESS -> {
                         val stress = data[3].toInt() and 0xFF
-                        if (stress != 0) {
-                            _stressData.tryEmit(stress)
-                            Log.d("ColmiRing", "Stress: ${stress}")
-                        }
+                        if (stress > 0) _stressData.tryEmit(stress)
                     }
-                    else -> Log.d("ColmiRing", "Subtipo de Frequência/SpO2/Estresse desconhecido: 0x${secondByte.toString(16)}")
+                    else -> {}
                 }
             }
-            0x02 -> {
-                Log.d("ColmiRing", "Tipo de Notificação: Gesto de Onda (0x02)")
-                if (secondByte == 0x02) {
-                    Log.d("ColmiRing", "Subtipo Gesto de Onda: Onda Detectada (0x02)")
-                }
-            }
-            else -> Log.d("ColmiRing", "Tipo de Notificação desconhecido: 0x${firstByte.toString(16)}. Dados: ${data.joinToString { String.format("%02X", it) }}")
+            else -> {}
         }
     }
 
@@ -411,34 +433,19 @@ class ColmiRingConnector(private val context: Context, private val device: Bluet
         data: ByteArray,
         bias: Triple<Int, Int, Int> = Triple(0, 0, 0)
     ): Pair<Triple<Float, Float, Float>, Float> {
-        val rawXcounts = (
-                (data[2].toInt() and 0xFF shl 4) or
-                        ((data[3].toInt() and 0xF0) shr 4)
-                ).toSigned(12) - bias.first
+        val rawX = ((data[6].toInt() and 0xFF shl 4) or ((data[7].toInt() and 0xF0) shr 4)).toSigned(12) - bias.first
+        val rawY = ((data[2].toInt() and 0xFF shl 4) or ((data[3].toInt() and 0xF0) shr 4)).toSigned(12) - bias.second
+        val rawZ = (((data[4].toInt() and 0x0F) shl 8) or (data[5].toInt() and 0xFF)).toSigned(12) - bias.third
 
-        val rawYcounts = (
-                ((data[3].toInt() and 0x0F) shl 8) or
-                        (data[4].toInt() and 0xFF)
-                ).toSigned(12) - bias.second
-
-        val rawZcounts = (
-                (data[5].toInt() and 0xFF shl 4) or
-                        ((data[6].toInt() and 0xF0) shr 4)
-                ).toSigned(12) - bias.third
-
-
-        val countsPerG = 2048f / 2f
+        val countsPerG = 2048f / 4f
         val mps2PerG  = 9.80665f
         val scale     = mps2PerG / countsPerG
 
-
-        val accelX = rawXcounts * scale
-        val accelY = rawYcounts * scale
-        val accelZ = rawZcounts * scale
-
+        val accelX = rawX * scale
+        val accelY = rawY * scale
+        val accelZ = rawZ * scale
 
         val magnitude = sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ)
-
         return Pair(Triple(accelX, accelY, accelZ), magnitude)
     }
 }

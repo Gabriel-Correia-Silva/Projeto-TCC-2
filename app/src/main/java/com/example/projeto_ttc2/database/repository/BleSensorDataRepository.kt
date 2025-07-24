@@ -23,10 +23,8 @@ class BleSensorDataRepository @Inject constructor() {
     private val _latestSpo2 = MutableStateFlow(0.0)
     val latestSpo2: StateFlow<Double> = _latestSpo2
 
-
-    private val _newRingAccelerometerReading = MutableSharedFlow<RingAccelerometerData>()
+    private val _newRingAccelerometerReading = MutableSharedFlow<RingAccelerometerData>(replay = 1)
     val newRingAccelerometerReading: SharedFlow<RingAccelerometerData> = _newRingAccelerometerReading
-
 
     private val _bufferedRingAccelerometerData = MutableStateFlow<MutableList<RingAccelerometerData>>(mutableListOf())
     val bufferedRingAccelerometerData: StateFlow<MutableList<RingAccelerometerData>> = _bufferedRingAccelerometerData
@@ -45,12 +43,10 @@ class BleSensorDataRepository @Inject constructor() {
     private val _bufferedRawPpgData = MutableStateFlow<MutableList<BleRawPpgData>>(mutableListOf())
     val bufferedRawPpgData: StateFlow<MutableList<BleRawPpgData>> = _bufferedRawPpgData
 
-
     fun updateRingAccelerometerData(x: Float, y: Float, z: Float) {
         val newReading = RingAccelerometerData(x = x, y = y, z = z, timestamp = System.currentTimeMillis())
         _latestBleAccelerometerData.value = newReading
         _bufferedRingAccelerometerData.value.add(newReading)
-
         _newRingAccelerometerReading.tryEmit(newReading)
     }
 

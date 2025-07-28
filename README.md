@@ -54,7 +54,7 @@ A **Injeção de Dependência** com Hilt é usada para desacoplar as classes e f
     - Abra o Android Studio (versão Hedgehog ou mais recente).
     - Selecione "Open an Existing Project" e navegue até a pasta do projeto clonado.
 3.  **Configuração do Firebase:**
-    - O projeto já contém um arquivo `google-services.json`. Para usar seu próprio backend Firebase, crie um novo projeto no [Firebase Console](https://console.firebase.google.com/).
+    - Faça sua propro=ia versão do `google-services.json`. Para usar seu próprio backend Firebase, crie um novo projeto no [Firebase Console](https://console.firebase.google.com/).
     - Adicione um aplicativo Android ao seu projeto Firebase com o nome do pacote `com.example.projeto_ttc2`.
     - Baixe o novo arquivo `google-services.json` e substitua o existente na pasta `app/`.
     - Ative o **Firebase Authentication** (com o provedor Google) e o **Cloud Firestore**.
